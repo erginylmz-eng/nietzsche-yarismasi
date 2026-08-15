@@ -3,11 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nietzsche Yarışması - Felsefî Değerlendirme Platformu</title>
-    <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-auth-compat.min.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.min.js"></script>
-    <script src="https://accounts.google.com/gsi/client"></script>
+    <title>Nietzsche Felsefî Değerlendirme Yarışması</title>
+    <script async src="https://accounts.google.com/gsi/client"></script>
     <style>
         * {
             margin: 0;
@@ -23,114 +20,83 @@
         }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 15px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            overflow: hidden;
+            padding: 40px;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 30px;
             text-align: center;
+            margin-bottom: 40px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 20px;
         }
 
         .header h1 {
+            color: #333;
             font-size: 28px;
             margin-bottom: 10px;
         }
 
         .header p {
+            color: #666;
             font-size: 14px;
-            opacity: 0.9;
         }
 
-        .content {
-            padding: 40px;
+        .screen {
+            display: none;
+        }
+
+        .screen.active {
+            display: block;
         }
 
         /* LOGIN SCREEN */
         .login-screen {
-            display: none;
             text-align: center;
             padding: 60px 20px;
         }
 
-        .login-screen.active {
-            display: block;
-        }
-
         .login-screen h2 {
-            margin-bottom: 30px;
             color: #333;
+            margin-bottom: 30px;
         }
 
-        .login-button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .login-button:hover {
-            background: #764ba2;
+        #googleLoginBtn {
+            margin-top: 20px;
         }
 
         /* ADMIN PANEL */
-        .admin-panel {
-            display: none;
+        .admin-panel h2 {
+            color: #333;
+            margin-bottom: 20px;
         }
 
-        .admin-panel.active {
-            display: block;
+        .participants-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
         }
 
-        .admin-header {
+        .participant-card {
             background: #f8f9fa;
             padding: 20px;
             border-radius: 10px;
-            margin-bottom: 30px;
             border-left: 4px solid #667eea;
         }
 
-        .admin-header h3 {
-            color: #333;
-            margin-bottom: 10px;
-        }
-
-        .participants-list {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-
-        .participants-list h4 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-
-        .participant-item {
-            background: white;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border: 2px solid #e0e0e0;
-        }
-
-        .participant-item.connected {
-            border-color: #4caf50;
+        .participant-card.connected {
+            border-left-color: #4caf50;
             background: #f1f8f4;
+        }
+
+        .participant-card h4 {
+            color: #333;
+            margin-bottom: 10px;
         }
 
         .status-badge {
@@ -139,62 +105,61 @@
             border-radius: 20px;
             font-size: 12px;
             font-weight: bold;
+            color: white;
+            background: #f44336;
         }
 
         .status-badge.online {
             background: #4caf50;
-            color: white;
-        }
-
-        .status-badge.offline {
-            background: #f44336;
-            color: white;
         }
 
         .status-badge.submitted {
             background: #2196f3;
-            color: white;
         }
 
-        .admin-controls {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .start-button {
-            background: #4caf50;
+        /* BUTTONS */
+        button {
+            background: #667eea;
             color: white;
             border: none;
-            padding: 15px 40px;
-            font-size: 16px;
+            padding: 12px 30px;
             border-radius: 8px;
             cursor: pointer;
+            font-size: 14px;
+            margin: 10px 5px;
             transition: background 0.3s;
-            margin-right: 10px;
         }
 
-        .start-button:hover:not(:disabled) {
-            background: #45a049;
+        button:hover:not(:disabled) {
+            background: #764ba2;
         }
 
-        .start-button:disabled {
+        button:disabled {
             background: #ccc;
             cursor: not-allowed;
         }
 
+        .logout-btn {
+            background: #f44336;
+            float: right;
+        }
+
+        .logout-btn:hover {
+            background: #da190b;
+        }
+
         /* PARTICIPANT SCREEN */
-        .participant-screen {
-            display: none;
+        .waiting-message {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            color: #856404;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 30px;
         }
 
-        .participant-screen.active {
-            display: block;
-        }
-
-        .case-section {
+        .case-container {
             background: #f8f9fa;
             padding: 20px;
             border-radius: 10px;
@@ -202,12 +167,12 @@
             border-left: 4px solid #667eea;
         }
 
-        .case-section h3 {
+        .case-container h3 {
             color: #333;
             margin-bottom: 15px;
         }
 
-        .case-content {
+        .case-text {
             background: white;
             padding: 15px;
             border-radius: 8px;
@@ -216,32 +181,16 @@
             margin-bottom: 15px;
         }
 
-        .timer-section {
+        .timer {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             color: white;
             padding: 20px;
             border-radius: 10px;
             text-align: center;
             margin-bottom: 30px;
-        }
-
-        .timer {
             font-size: 48px;
             font-weight: bold;
-            margin: 10px 0;
             font-family: 'Courier New', monospace;
-        }
-
-        .answer-section {
-            background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 30px;
-        }
-
-        .answer-section h4 {
-            color: #333;
-            margin-bottom: 15px;
         }
 
         textarea {
@@ -253,7 +202,7 @@
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 14px;
             resize: vertical;
-            transition: border-color 0.3s;
+            margin-bottom: 10px;
         }
 
         textarea:focus {
@@ -261,131 +210,42 @@
             border-color: #667eea;
         }
 
-        .submit-button {
-            background: #667eea;
-            color: white;
-            border: none;
-            padding: 15px 40px;
-            font-size: 16px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.3s;
-            width: 100%;
-            margin-top: 15px;
+        .char-count {
+            font-size: 12px;
+            color: #999;
+            margin-bottom: 15px;
         }
 
-        .submit-button:hover:not(:disabled) {
+        .submit-btn {
+            width: 100%;
+            background: #667eea;
+            padding: 15px;
+            font-size: 16px;
+        }
+
+        .submit-btn:hover:not(:disabled) {
             background: #764ba2;
         }
 
-        .submit-button:disabled {
-            background: #ccc;
-            cursor: not-allowed;
-        }
-
-        /* EVALUATION SCREEN */
-        .evaluation-screen {
+        .submitted-message {
             display: none;
+            background: #d4edda;
+            border: 2px solid #28a745;
+            color: #155724;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
         }
 
-        .evaluation-screen.active {
+        .submitted-message.show {
             display: block;
         }
 
-        .evaluation-card {
+        .user-info {
             background: #f8f9fa;
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 25px;
-            border-left: 4px solid #667eea;
-        }
-
-        .evaluation-card h4 {
-            color: #333;
-            margin-bottom: 15px;
-        }
-
-        .score {
-            font-size: 24px;
-            font-weight: bold;
-            color: #667eea;
-            margin-bottom: 15px;
-        }
-
-        .score-bar {
-            background: #e0e0e0;
-            height: 10px;
-            border-radius: 5px;
-            overflow: hidden;
-            margin-bottom: 15px;
-        }
-
-        .score-fill {
-            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
-            height: 100%;
-            border-radius: 5px;
-            transition: width 0.3s;
-        }
-
-        .feedback {
-            background: white;
             padding: 15px;
             border-radius: 8px;
-            color: #555;
-            line-height: 1.6;
-            font-size: 14px;
-        }
-
-        .logout-button {
-            background: #f44336;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 14px;
-            float: right;
-        }
-
-        .logout-button:hover {
-            background: #da190b;
-        }
-
-        .waiting-message {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            color: #856404;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-        }
-
-        .spinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #667eea;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .user-info {
-            float: right;
-            background: #f8f9fa;
-            padding: 10px 20px;
-            border-radius: 8px;
+            margin-bottom: 20px;
             font-size: 14px;
             color: #666;
         }
@@ -404,194 +264,184 @@
             <p>Friedrich Nietzsche'nin Perspektifinden Kurumsal Vakaları Analiz Edin</p>
         </div>
 
-        <div class="content">
-            <!-- LOGIN SCREEN -->
-            <div class="login-screen active">
-                <h2>Hoş Geldiniz</h2>
-                <p style="margin-bottom: 30px; color: #666;">Google hesabınızla giriş yapın</p>
-                <button class="login-button" id="googleLoginBtn">Google ile Giriş Yap</button>
+        <!-- LOGIN SCREEN -->
+        <div class="login-screen screen active">
+            <h2>Hoş Geldiniz</h2>
+            <p style="margin-bottom: 30px; color: #666;">Google hesabınızla giriş yapın</p>
+            <div id="googleLoginBtn"></div>
+        </div>
+
+        <!-- ADMIN PANEL -->
+        <div class="admin-panel screen">
+            <div class="clearfix">
+                <h2 style="float: left;">Yönetici Paneli</h2>
+                <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
+            </div>
+            <div style="clear: both;"></div>
+
+            <div class="user-info" id="adminUserInfo"></div>
+
+            <div class="case-container">
+                <h3>Katılımcı Durumu</h3>
+                <div class="participants-grid" id="participantsList"></div>
             </div>
 
-            <!-- ADMIN PANEL -->
-            <div class="admin-panel">
-                <div class="clearfix">
-                    <h2 style="float: left;">Yönetici Paneli</h2>
-                    <button class="logout-button" id="logoutBtn">Çıkış Yap</button>
-                </div>
-                <div class="user-info" id="userInfo"></div>
-                <div style="clear: both;"></div>
-
-                <div class="admin-header">
-                    <h3>Katılımcı Durumu</h3>
-                    <p>Tüm katılımcılar bağlanana kadar başlayamazsınız.</p>
-                </div>
-
-                <div class="participants-list">
-                    <h4>Bağlı Katılımcılar</h4>
-                    <div id="participantsList"></div>
-                </div>
-
-                <div class="admin-controls">
-                    <button class="start-button" id="startButton" disabled>Yarışmayı Başlat (Tüm Katılımcılar Hazır Olmalı)</button>
-                </div>
-
-                <div id="evaluationResults" style="display: none;">
-                    <h3 style="margin-bottom: 20px;">Değerlendirme Sonuçları</h3>
-                    <div id="resultsContainer"></div>
-                </div>
+            <div style="text-align: center;">
+                <button id="startButton" onclick="startCompetition()" style="width: auto; padding: 15px 50px; font-size: 16px;" disabled>
+                    Yarışmayı Başlat
+                </button>
             </div>
 
-            <!-- PARTICIPANT SCREEN -->
-            <div class="participant-screen">
-                <div class="clearfix">
-                    <h2 style="float: left;">Yarışma Alanı</h2>
-                    <button class="logout-button" id="logoutBtn2">Çıkış Yap</button>
-                </div>
-                <div class="user-info" id="userInfo2"></div>
-                <div style="clear: both;"></div>
+            <div id="evaluationResults" style="margin-top: 40px; display: none;">
+                <h3>Değerlendirme Sonuçları</h3>
+                <div id="resultsContainer"></div>
+            </div>
+        </div>
 
-                <div id="waitingArea" class="waiting-message">
-                    <div class="spinner"></div>
-                    <p>Yönetici yarışmayı başlatmayı bekliyor...</p>
-                </div>
+        <!-- PARTICIPANT SCREEN -->
+        <div class="participant-screen screen">
+            <div class="clearfix">
+                <h2 style="float: left;">Yarışma Alanı</h2>
+                <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
+            </div>
+            <div style="clear: both;"></div>
 
-                <div id="caseArea" style="display: none;">
-                    <div class="timer-section">
-                        <h3>Kalan Süre</h3>
-                        <div class="timer" id="timer">30:00</div>
-                        <p id="timerStatus">Başlıyor...</p>
-                    </div>
+            <div class="user-info" id="participantUserInfo"></div>
 
-                    <div class="case-section">
-                        <h3>Vaka</h3>
-                        <div class="case-content" id="caseContent">
-                            Vaka yükleniyor...
-                        </div>
-                    </div>
-
-                    <div class="answer-section">
-                        <h4>Nietzsche Perspektifinden Cevabınız</h4>
-                        <textarea id="answerTextarea" placeholder="Friedrich Nietzsche'nin felsefesine göre bu vakaya nasıl yaklaşırdı? Detaylı olarak açıklayın..." maxlength="5000"></textarea>
-                        <div style="font-size: 12px; color: #999; margin-top: 10px;">
-                            <span id="charCount">0</span> / 5000 karakter
-                        </div>
-                        <button class="submit-button" id="submitButton">Cevabı Gönder</button>
-                    </div>
-
-                    <div id="submittedMessage" style="display: none; background: #d4edda; border: 2px solid #28a745; color: #155724; padding: 20px; border-radius: 8px; text-align: center;">
-                        <h3>✓ Cevabınız Gönderildi</h3>
-                        <p>Diğer katılımcıların cevaplarını bekliyor...</p>
-                    </div>
-                </div>
+            <div id="waitingArea" class="waiting-message">
+                <p>⏳ Yönetici yarışmayı başlatmayı bekliyor...</p>
             </div>
 
-            <!-- EVALUATION SCREEN -->
-            <div class="evaluation-screen">
-                <div class="clearfix">
-                    <h2 style="float: left;">Değerlendirme Sonuçları</h2>
-                    <button class="logout-button" id="logoutBtn3">Çıkış Yap</button>
-                </div>
-                <div style="clear: both;"></div>
+            <div id="competitionArea" style="display: none;">
+                <div class="timer" id="timer">30:00</div>
 
-                <div id="evaluationContainer"></div>
+                <div class="case-container">
+                    <h3>Vaka</h3>
+                    <div class="case-text" id="caseContent">Vaka yükleniyor...</div>
+                </div>
+
+                <h3>Nietzsche Perspektifinden Cevabınız</h3>
+                <textarea id="answerTextarea" placeholder="Friedrich Nietzsche'nin felsefesine göre bu vakaya nasıl yaklaşırdı? Detaylı olarak açıklayın..." maxlength="5000"></textarea>
+                <div class="char-count"><span id="charCount">0</span> / 5000 karakter</div>
+                <button class="submit-btn" id="submitButton" onclick="submitAnswer()">Cevabı Gönder</button>
+
+                <div class="submitted-message" id="submittedMessage">
+                    <h3>✓ Cevabınız Gönderildi</h3>
+                    <p>Diğer katılımcıların cevaplarını bekliyor...</p>
+                </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Firebase Configuration
+        // ==================== CONFIGURATION ====================
+        // BURAYA FIREBASE CONFIG'I YAPISTIR:
         const firebaseConfig = {
-  apiKey: "AIzaSyAJaW8D4_ercI-h3WnYWNT4vbt84cS7cj8",
-  authDomain: "nietzsche-yarismasi.firebaseapp.com",
-  projectId: "nietzsche-yarismasi",
-  storageBucket: "nietzsche-yarismasi.firebasestorage.app",
-  messagingSenderId: "146823986268",
-  appId: "1:146823986268:web:4364f981a4e0f8b0a5ba99"
-};
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
-
-        // Google Login
-        window.onload = function() {
-            google.accounts.id.initialize({
-                client_id: '146823986268-ic4k22a3m834qgk4uukab0338662n9pu.apps.googleusercontent.com',
-                callback: handleCredentialResponse
-            });
+            apiKey: "AIzaSyAJaW8D4_ercI-h3WnYWNT4vbt84cS7cj8",
+            authDomain: "nietzsche-yarismasi.firebaseapp.com",
+            projectId: "nietzsche-yarismasi",
+            storageBucket: "nietzsche-yarismasi.appspot.com",
+            messagingSenderId: "BURAYA_YAPISTIR",
+            appId: "BURAYA_YAPISTIR"
         };
 
-        function handleCredentialResponse(response) {
-            // Decode JWT token
-            const token = response.credential;
-            const base64Url = token.split('.')[1];
-            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-            }).join(''));
+        // BURAYA GOOGLE CLIENT ID'NI YAPISTIR:
+        const GOOGLE_CLIENT_ID = "146823986268-ic4k22a3m834qgk4uukab0338662n9pu.apps.googleusercontent.com";
 
-            const userData = JSON.parse(jsonPayload);
+        // Admin email
+        const ADMIN_EMAIL = "erginylmz@gmail.com";
 
-            // Sign in with Firebase
-            auth.signInWithCustomToken(token).catch(error => {
-                console.log("Signing in with credentials...");
-                auth.signInAnonymously();
-            });
-        }
+        // ==================== INITIALIZE FIREBASE ====================
+        // Firebase SDK'sını dinamik olarak yükle
+        const script = document.createElement('script');
+        script.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.min.js";
+        script.onload = () => {
+            const script2 = document.createElement('script');
+            script2.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth-compat.min.js";
+            script2.onload = () => {
+                const script3 = document.createElement('script');
+                script3.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.min.js";
+                script3.onload = () => {
+                    // Firebase initialize
+                    firebase.initializeApp(firebaseConfig);
+                    const auth = firebase.auth();
+                    const db = firebase.firestore();
 
-        document.getElementById('googleLoginBtn').onclick = function() {
-            google.accounts.id.renderButton(
-                document.getElementById('googleLoginBtn'),
-                { theme: 'filled_blue', size: 'large' }
-            );
+                    // Google OAuth
+                    window.onload = function() {
+                        google.accounts.id.initialize({
+                            client_id: GOOGLE_CLIENT_ID,
+                            callback: handleCredentialResponse
+                        });
+                        google.accounts.id.renderButton(
+                            document.getElementById('googleLoginBtn'),
+                            { theme: 'filled_blue', size: 'large' }
+                        );
+                    };
+
+                    function handleCredentialResponse(response) {
+                        // Parse JWT
+                        const token = response.credential;
+                        const base64Url = token.split('.')[1];
+                        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                        }).join(''));
+                        const userData = JSON.parse(jsonPayload);
+
+                        // Sign in with Google
+                        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+                            .then(result => {
+                                setupSession(result.user);
+                            })
+                            .catch(error => {
+                                console.error("Auth error:", error);
+                                alert("Giriş başarısız: " + error.message);
+                            });
+                    }
+
+                    function setupSession(user) {
+                        const isAdmin = user.email === ADMIN_EMAIL;
+
+                        if (isAdmin) {
+                            showScreen('admin');
+                            document.getElementById('adminUserInfo').textContent = `Admin: ${user.email}`;
+                            setupAdminPanel(db, user);
+                        } else {
+                            showScreen('participant');
+                            document.getElementById('participantUserInfo').textContent = `Katılımcı: ${user.email}`;
+                            setupParticipantScreen(db, user);
+                        }
+                    }
+
+                    // Logout
+                    window.logout = function() {
+                        auth.signOut().then(() => {
+                            showScreen('login');
+                        });
+                    };
+
+                    // Auth state listener
+                    auth.onAuthStateChanged(user => {
+                        if (!user) {
+                            showScreen('login');
+                        }
+                    });
+                };
+                document.head.appendChild(script3);
+            };
+            document.head.appendChild(script2);
         };
+        document.head.appendChild(script);
 
-        // Auth State Listener
-        auth.onAuthStateChanged(user => {
-            if (user) {
-                setupUserSession(user);
-            } else {
-                showScreen('login');
-            }
-        });
-
-        function setupUserSession(user) {
-            // Check if admin
-            const adminEmail = 'erginylmz@gmail.com'; // Admin email'ini buraya yaz
-            const isAdmin = user.email === adminEmail;
-
-            if (isAdmin) {
-                showScreen('admin');
-                setupAdminPanel();
-            } else {
-                showScreen('participant');
-                setupParticipantScreen(user);
-            }
-        }
-
+        // ==================== HELPERS ====================
         function showScreen(screen) {
-            document.querySelectorAll('.login-screen, .admin-panel, .participant-screen, .evaluation-screen').forEach(el => {
-                el.classList.remove('active');
-            });
-
-            if (screen === 'login') {
-                document.querySelector('.login-screen').classList.add('active');
-            } else if (screen === 'admin') {
-                document.querySelector('.admin-panel').classList.add('active');
-            } else if (screen === 'participant') {
-                document.querySelector('.participant-screen').classList.add('active');
-            } else if (screen === 'evaluation') {
-                document.querySelector('.evaluation-screen').classList.add('active');
-            }
+            document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
+            document.querySelector('.' + screen + '-screen').classList.add('active');
         }
 
-        // Admin Panel Setup
-        function setupAdminPanel() {
-            const userInfo = document.getElementById('userInfo');
-            auth.currentUser.reload().then(() => {
-                userInfo.textContent = `Admin: ${auth.currentUser.email}`;
-            });
-
+        // ==================== ADMIN PANEL ====================
+        function setupAdminPanel(db, user) {
             // Listen to participants
             db.collection('participants').onSnapshot(snapshot => {
                 const list = document.getElementById('participantsList');
@@ -600,40 +450,36 @@
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    const item = document.createElement('div');
-                    item.className = `participant-item ${data.status === 'connected' ? 'connected' : ''}`;
-                    item.innerHTML = `
-                        <div>
-                            <strong>${data.name}</strong>
-                            <p style="font-size: 12px; color: #999;">Email: ${data.email}</p>
-                        </div>
-                        <span class="status-badge ${data.status === 'connected' ? 'online' : data.submitted ? 'submitted' : 'offline'}">
-                            ${data.status === 'connected' ? '🟢 Bağlı' : data.submitted ? '✓ Gönderdi' : '🔴 Bağlı Değil'}
+                    const card = document.createElement('div');
+                    card.className = `participant-card ${data.status === 'connected' ? 'connected' : ''}`;
+                    card.innerHTML = `
+                        <h4>${data.name || 'Katılımcı'}</h4>
+                        <p style="font-size: 12px; color: #999; margin-bottom: 10px;">${data.email}</p>
+                        <span class="status-badge ${data.status === 'connected' ? 'online' : ''}">
+                            ${data.status === 'connected' ? '✓ Bağlı' : '✗ Bağlı Değil'}
                         </span>
                     `;
-                    list.appendChild(item);
+                    list.appendChild(card);
                     if (data.status !== 'connected') allReady = false;
                 });
 
                 document.getElementById('startButton').disabled = !allReady;
             });
-
-            document.getElementById('startButton').onclick = async () => {
-                // Start competition
-                await db.collection('session').doc('current').set({
-                    status: 'started',
-                    startTime: new Date(),
-                    duration: 30 * 60 * 1000 // 30 minutes
-                });
-            };
         }
 
-        // Participant Screen Setup
-        function setupParticipantScreen(user) {
-            const userInfo = document.getElementById('userInfo2');
-            userInfo.textContent = `Katılımcı: ${user.email}`;
+        function startCompetition() {
+            const db = firebase.firestore();
+            db.collection('session').doc('current').set({
+                status: 'started',
+                startTime: new Date(),
+                duration: 30 * 60 * 1000
+            });
+            alert('Yarışma başlatıldı!');
+        }
 
-            // Register participant
+        // ==================== PARTICIPANT SCREEN ====================
+        function setupParticipantScreen(db, user) {
+            // Register as connected
             db.collection('participants').doc(user.uid).set({
                 name: user.displayName || 'Katılımcı',
                 email: user.email,
@@ -641,13 +487,13 @@
                 connected_at: new Date()
             }, { merge: true });
 
-            // Listen to session
+            // Listen for session start
             db.collection('session').doc('current').onSnapshot(doc => {
                 if (doc.data()?.status === 'started') {
                     document.getElementById('waitingArea').style.display = 'none';
-                    document.getElementById('caseArea').style.display = 'block';
+                    document.getElementById('competitionArea').style.display = 'block';
                     startTimer();
-                    loadCase();
+                    loadCase(db);
                 }
             });
 
@@ -655,31 +501,11 @@
             document.getElementById('answerTextarea').addEventListener('input', function() {
                 document.getElementById('charCount').textContent = this.value.length;
             });
-
-            // Submit answer
-            document.getElementById('submitButton').onclick = async () => {
-                const answer = document.getElementById('answerTextarea').value;
-                if (answer.trim()) {
-                    await db.collection('responses').doc(user.uid).set({
-                        participant_id: user.uid,
-                        participant_email: user.email,
-                        answer: answer,
-                        submitted_at: new Date(),
-                        timestamp: Date.now()
-                    });
-
-                    document.getElementById('submitButton').disabled = true;
-                    document.getElementById('answerTextarea').disabled = true;
-                    document.getElementById('submittedMessage').style.display = 'block';
-                }
-            };
         }
 
-        let timerInterval;
         function startTimer() {
-            let timeLeft = 30 * 60; // 30 minutes in seconds
-
-            timerInterval = setInterval(() => {
+            let timeLeft = 30 * 60;
+            setInterval(() => {
                 timeLeft--;
                 const minutes = Math.floor(timeLeft / 60);
                 const seconds = timeLeft % 60;
@@ -687,32 +513,45 @@
                     `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
                 if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
                     document.getElementById('submitButton').disabled = true;
-                    document.getElementById('timerStatus').textContent = 'Süre Bitti';
                 }
             }, 1000);
         }
 
-        async function loadCase() {
-            // Load case from Firebase or generate new one
-            const caseDoc = await db.collection('cases').doc('current').get();
-            if (caseDoc.exists) {
-                document.getElementById('caseContent').innerHTML = `
-                    <strong>Tema:</strong> ${caseDoc.data().theme}<br><br>
-                    ${caseDoc.data().content}
-                `;
-            }
+        function loadCase(db) {
+            db.collection('cases').doc('current').get().then(doc => {
+                if (doc.exists) {
+                    document.getElementById('caseContent').innerHTML = `
+                        <strong>Tema: ${doc.data().theme}</strong><br><br>
+                        ${doc.data().content}
+                    `;
+                }
+            });
         }
 
-        // Logout
-        document.querySelectorAll('#logoutBtn, #logoutBtn2, #logoutBtn3').forEach(btn => {
-            btn.onclick = () => {
-                auth.signOut().then(() => {
-                    showScreen('login');
-                });
-            };
-        });
+        function submitAnswer() {
+            const db = firebase.firestore();
+            const user = firebase.auth().currentUser;
+            const answer = document.getElementById('answerTextarea').value;
+
+            if (!answer.trim()) {
+                alert('Lütfen cevap yazın!');
+                return;
+            }
+
+            db.collection('responses').doc(user.uid).set({
+                participant_id: user.uid,
+                participant_email: user.email,
+                answer: answer,
+                submitted_at: new Date(),
+                timestamp: Date.now()
+            }).then(() => {
+                document.getElementById('submitButton').disabled = true;
+                document.getElementById('answerTextarea').disabled = true;
+                document.getElementById('submittedMessage').classList.add('show');
+                alert('Cevabınız gönderildi!');
+            });
+        }
     </script>
 </body>
 </html>
