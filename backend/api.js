@@ -1,25 +1,20 @@
 const express = require('express');
 const cors = require('cors');
+const path = require('path');
 const admin = require('firebase-admin');
 const Anthropic = require('@anthropic-ai/sdk');
 require('dotenv').config();
 
 const app = express();
-
-// Middleware
 app.use(cors());
 app.use(express.json());
 
-// Initialize Firebase Admin
+// ==================== FIREBASE ADMIN ====================
 const serviceAccount = {
-    type: process.env.FIREBASE_TYPE || 'service_account',
+    type: 'service_account',
     project_id: process.env.FIREBASE_PROJECT_ID,
-    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
     private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     client_email: process.env.FIREBASE_CLIENT_EMAIL,
-    client_id: process.env.FIREBASE_CLIENT_ID,
-    auth_uri: 'https://accounts.google.com/o/oauth2/auth',
-    token_uri: 'https://oauth2.googleapis.com/token',
 };
 
 admin.initializeApp({
@@ -28,312 +23,280 @@ admin.initializeApp({
 });
 
 const db = admin.firestore();
+const FieldValue = admin.firestore.FieldValue;
 
-// Initialize Claude API
-const client = new Anthropic({
-    apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// ==================== CLAUDE ====================
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+const MODEL = 'claude-sonnet-5';
 
-// ============ API ENDPOINTS ============
+const THEMES = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
+const ROUND_DURATION_MS = 30 * 60 * 1000;
 
-// 1. Generate New Case
-app.post('/api/generate-case', async (req, res) => {
+function extractText(message) {
+    return message.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+}
+
+async function pickTheme() {
+    // Önceki vakayla aynı temayı arka arkaya seçmemeye çalış
     try {
-        const themes = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
-        const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-
-        const prompt = `Sen bir kurumsal etik danışmanısın. Nietzsche felsefesinin perspektifinden değerlendirilmesi için,
-        "${randomTheme}" teması çerçevesinde, gerçekçi bir kurumsal vaka yaratmalısın.
-
-        Vaka şu unsurları içermeli:
-        1. Gerçekçi bir kurumsal durum
-        2. Etik bir ikilem veya problem
-        3. Karar alınması gereken bir nokta
-        4. Nietzsche'nin felsefesine göre analiz edilebilecek yönler
-
-        Vakanın Nietzsche'nin perspektifinden analiz edilebilmesi için yeterli detay verir misin?
-
-        Format:
-        BAŞLIK: [Kısa başlık]
-        DURUM: [Ayrıntılı durum açıklaması]
-        PROBLEM: [Çözülmesi gereken sorun]
-        NIETZSCHE AÇISI: [Nietzsche'nin bu duruma nasıl bakabileceğinin ipuçları]`;
-
-        const message = await client.messages.create({
-            model: 'claude-3-5-sonnet-20241022',
-            max_tokens: 1024,
-            messages: [
-                {
-                    role: 'user',
-                    content: prompt
-                }
-            ]
-        });
-
-        const caseContent = message.content[0].type === 'text' ? message.content[0].text : '';
-
-        // Save to Firebase
-        await db.collection('cases').doc('current').set({
-            theme: randomTheme,
-            content: caseContent,
-            created_at: new Date(),
-            status: 'active'
-        });
-
-        res.json({
-            success: true,
-            case: {
-                theme: randomTheme,
-                content: caseContent
-            }
-        });
-
-    } catch (error) {
-        console.error('Error generating case:', error);
-        res.status(500).json({ error: error.message });
+        const prev = await db.collection('session').doc('current').get();
+        const prevTheme = prev.exists ? prev.data().lastTheme : null;
+        const pool = prevTheme ? THEMES.filter(t => t !== prevTheme) : THEMES;
+        return pool[Math.floor(Math.random() * pool.length)];
+    } catch (e) {
+        return THEMES[Math.floor(Math.random() * THEMES.length)];
     }
-});
+}
 
-// 2. Evaluate Responses
-app.post('/api/evaluate-responses', async (req, res) => {
-    try {
-        const { responses } = req.body;
+async function generateCaseWithAI() {
+    const theme = await pickTheme();
 
-        if (!responses || responses.length === 0) {
-            return res.status(400).json({ error: 'No responses provided' });
-        }
+    const prompt = `Sen bir kurumsal etik danışmanısın. Friedrich Nietzsche felsefesinin perspektifinden değerlendirilmek üzere, "${theme}" teması çerçevesinde gerçekçi, özgün bir kurumsal vaka yaz.
 
-        // Get current case
-        const caseDoc = await db.collection('cases').doc('current').get();
-        if (!caseDoc.exists) {
-            return res.status(400).json({ error: 'No active case' });
-        }
+Vaka şunları içermeli:
+1. Gerçekçi bir kurumsal/organizasyonel durum
+2. Etik bir ikilem veya çatışma
+3. Karar alınması gereken somut bir nokta
+4. Nietzsche'nin güç istenci, köle/efendi ahlakı, değerlerin yeniden değerlendirilmesi gibi kavramlarıyla analiz edilebilecek zengin bir zemin
 
-        const caseData = caseDoc.data();
-        const evaluations = [];
+Vaka 250-400 kelime uzunluğunda, akıcı bir anlatı olarak yazılsın (madde işareti kullanma, düz metin). Vakanın sonunda katılımcıya yöneltilen açık bir soru olsun: "Nietzsche'nin felsefesi ışığında bu duruma nasıl yaklaşılmalıdır?" gibi.
 
-        // Evaluate each response
-        for (const response of responses) {
-            const evaluationPrompt = `Friedrich Nietzsche'nin felsefesine göre aşağıdaki cevabı değerlendir:
+Sadece vakanın kendisini yaz, başka açıklama ekleme. İlk satırda kısa, çarpıcı bir başlık olsun (örn: "Terfi Kararı"), sonrasında vaka metni gelsin.`;
 
-VAKA:
-${caseData.content}
+    const message = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }]
+    });
 
-TEMA: ${caseData.theme}
+    const raw = extractText(message).trim();
+    const lines = raw.split('\n').filter(l => l.trim().length > 0);
+    const title = lines[0]?.replace(/^#+\s*/, '').trim() || theme;
+    const content = lines.slice(1).join('\n\n').trim() || raw;
+
+    return { theme, title, content };
+}
+
+async function evaluateResponseWithAI(caseData, response) {
+    const prompt = `Friedrich Nietzsche'nin felsefesi perspektifinden aşağıdaki katılımcı cevabını değerlendir.
+
+VAKA (Tema: ${caseData.theme}):
+${caseData.title ? caseData.title + '\n' : ''}${caseData.content}
 
 KATILIMCININ CEVABI:
 ${response.answer}
 
-Lütfen şu kriterlere göre değerlendir (0-100):
-1. Nietzsche Felsefesine Uygunluk (0-25 puan)
-2. Temel Düşünceleri Doğru Temsil (0-25 puan)
-3. Mantıksal Tutarlılık (0-25 puan)
-4. Kurumsal Uygulanabilirlik (0-25 puan)
+Şu 4 kritere göre değerlendir (her biri 0-25 puan, toplam 0-100):
+1. Nietzsche Felsefesine Uygunluk
+2. Temel Düşünceleri Doğru Temsil Etme
+3. Mantıksal Tutarlılık
+4. Kurumsal/Pratik Uygulanabilirlik
 
-Yanıtında şunları içer:
-- Toplam Puan (0-100)
-- Her kriterden aldığı puan
-- Güçlü Yönler (neden yüksek puan aldığı)
-- Eksiklikler (nerelerden puan kaybettiği)
-- Genel Değerlendirme
-
-JSON formatında yanıt ver:
+SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama ekleme:
 {
-    "total_score": 0,
-    "criteria": {
-        "nietzsche_alignment": 0,
-        "fundamental_thoughts": 0,
-        "logical_consistency": 0,
-        "institutional_applicability": 0
-    },
-    "strengths": "...",
-    "weaknesses": "...",
-    "general_evaluation": "..."
+  "total_score": 0,
+  "criteria": {
+    "nietzsche_alignment": 0,
+    "fundamental_thoughts": 0,
+    "logical_consistency": 0,
+    "institutional_applicability": 0
+  },
+  "strengths": "Güçlü yönler, kısa ve öz (1-2 cümle)",
+  "weaknesses": "Eksiklikler, kısa ve öz (1-2 cümle)",
+  "general_evaluation": "Genel değerlendirme (2-3 cümle)"
 }`;
 
-            const message = await client.messages.create({
-                model: 'claude-3-5-sonnet-20241022',
-                max_tokens: 1500,
-                messages: [
-                    {
-                        role: 'user',
-                        content: evaluationPrompt
-                    }
-                ]
-            });
+    const message = await anthropic.messages.create({
+        model: MODEL,
+        max_tokens: 1000,
+        messages: [{ role: 'user', content: prompt }]
+    });
 
-            const evaluationText = message.content[0].type === 'text' ? message.content[0].text : '';
+    const text = extractText(message);
+    let evaluation = null;
+    try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) evaluation = JSON.parse(jsonMatch[0]);
+    } catch (e) {
+        console.error('Evaluation JSON parse error:', e.message);
+    }
 
-            // Parse JSON from response
-            let evaluation = {};
-            try {
-                const jsonMatch = evaluationText.match(/\{[\s\S]*\}/);
-                if (jsonMatch) {
-                    evaluation = JSON.parse(jsonMatch[0]);
-                }
-            } catch (e) {
-                console.error('Error parsing evaluation JSON:', e);
-                evaluation = {
-                    total_score: 0,
-                    criteria: {},
-                    strengths: '',
-                    weaknesses: '',
-                    general_evaluation: evaluationText
-                };
+    if (!evaluation || typeof evaluation.total_score !== 'number') {
+        evaluation = {
+            total_score: 0,
+            criteria: {},
+            strengths: '',
+            weaknesses: '',
+            general_evaluation: text || 'Değerlendirme ayrıştırılamadı.'
+        };
+    }
+
+    return evaluation;
+}
+
+// ==================== API: YENİ VAKA BAŞLAT ====================
+app.post('/api/start-round', async (req, res) => {
+    try {
+        const sessionSnap = await db.collection('session').doc('current').get();
+        const lastCaseNumber = sessionSnap.exists ? (sessionSnap.data().caseNumber || 0) : 0;
+        const nextCaseNumber = lastCaseNumber + 1;
+
+        console.log(`Vaka #${nextCaseNumber} için yapay zekadan içerik isteniyor...`);
+        const { theme, title, content } = await generateCaseWithAI();
+
+        const caseData = {
+            caseNumber: nextCaseNumber,
+            theme,
+            title,
+            content,
+            generated_at: FieldValue.serverTimestamp()
+        };
+
+        const batch = db.batch();
+        batch.set(db.collection('cases').doc('current'), caseData);
+        batch.set(db.collection('cases').doc('case_' + nextCaseNumber), caseData);
+        await batch.commit();
+
+        const startTime = Date.now();
+        await db.collection('session').doc('current').set({
+            status: 'started',
+            caseNumber: nextCaseNumber,
+            startTime,
+            duration: ROUND_DURATION_MS,
+            evaluationStatus: 'pending',
+            lastTheme: theme
+        });
+
+        console.log(`✓ Vaka #${nextCaseNumber} (${theme}) başlatıldı`);
+        res.json({ success: true, caseNumber: nextCaseNumber, theme, title, content });
+    } catch (error) {
+        console.error('start-round error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== API: TURU DEĞERLENDİR ====================
+app.post('/api/evaluate-round', async (req, res) => {
+    const sessionRef = db.collection('session').doc('current');
+
+    try {
+        const claim = await db.runTransaction(async (tx) => {
+            const sessionDoc = await tx.get(sessionRef);
+            if (!sessionDoc.exists) return { proceed: false, reason: 'no-session' };
+
+            const session = sessionDoc.data();
+            if (session.status !== 'started') {
+                return { proceed: false, reason: 'not-started', status: session.status };
+            }
+            if (session.evaluationStatus && session.evaluationStatus !== 'pending') {
+                return { proceed: false, reason: 'already-' + session.evaluationStatus };
             }
 
-            evaluations.push({
-                participant_id: response.participant_id,
-                participant_email: response.participant_email,
-                answer: response.answer,
-                evaluation: evaluation,
-                evaluated_at: new Date()
-            });
+            const caseNumber = session.caseNumber;
+            const participantsSnap = await tx.get(db.collection('participants').where('status', '==', 'connected'));
+            const responsesSnap = await tx.get(db.collection('responses').where('case_number', '==', caseNumber));
 
-            // Save to Firebase
-            await db.collection('evaluations').doc(response.participant_id).set({
+            const totalParticipants = participantsSnap.size;
+            const submittedCount = responsesSnap.size;
+            const timeUp = (Date.now() - session.startTime) >= session.duration;
+
+            if (submittedCount < totalParticipants && !timeUp) {
+                return { proceed: false, reason: 'waiting', submittedCount, totalParticipants };
+            }
+
+            tx.update(sessionRef, { status: 'evaluating', evaluationStatus: 'evaluating' });
+
+            return {
+                proceed: true,
+                caseNumber,
+                responses: responsesSnap.docs.map(d => d.data())
+            };
+        });
+
+        if (!claim.proceed) {
+            return res.json({ success: true, skipped: true, ...claim });
+        }
+
+        const { caseNumber, responses } = claim;
+        console.log(`Vaka #${caseNumber} değerlendiriliyor (${responses.length} cevap)...`);
+
+        const caseDoc = await db.collection('cases').doc('case_' + caseNumber).get();
+        const caseData = caseDoc.exists ? caseDoc.data() : (await db.collection('cases').doc('current').get()).data();
+
+        const evaluations = [];
+        for (const response of responses) {
+            const evaluation = await evaluateResponseWithAI(caseData, response);
+            evaluations.push({ ...response, evaluation });
+
+            await db.collection('evaluations').doc(`case${caseNumber}_${response.participant_id}`).set({
                 participant_id: response.participant_id,
                 participant_email: response.participant_email,
+                participant_name: response.participant_name || '',
+                case_number: caseNumber,
                 answer: response.answer,
-                evaluation: evaluation,
-                evaluated_at: new Date(),
-                case_theme: caseData.theme
+                evaluation,
+                evaluated_at: FieldValue.serverTimestamp()
             });
         }
 
-        // Rank responses by score
         evaluations.sort((a, b) => (b.evaluation.total_score || 0) - (a.evaluation.total_score || 0));
 
-        // Award prize to top responder
         if (evaluations.length > 0) {
             const winner = evaluations[0];
-            await db.collection('winners').doc(caseData.theme).set({
+            await db.collection('winners').doc('case' + caseNumber).set({
                 participant_id: winner.participant_id,
                 participant_email: winner.participant_email,
-                score: winner.evaluation.total_score,
-                case_theme: caseData.theme,
+                participant_name: winner.participant_name || '',
+                case_number: caseNumber,
+                score: winner.evaluation.total_score || 0,
                 prize: 20000,
-                awarded_at: new Date()
+                awarded_at: FieldValue.serverTimestamp()
             });
         }
 
-        res.json({
-            success: true,
-            evaluations: evaluations,
-            ranked: true
-        });
+        await sessionRef.update({ status: 'finished', evaluationStatus: 'done' });
 
+        console.log(`✓ Vaka #${caseNumber} değerlendirmesi tamamlandı`);
+        res.json({ success: true, skipped: false, caseNumber, count: evaluations.length });
     } catch (error) {
-        console.error('Error evaluating responses:', error);
-        res.status(500).json({ error: error.message });
+        console.error('evaluate-round error:', error);
+        try {
+            await sessionRef.update({ evaluationStatus: 'pending', status: 'started' });
+        } catch (e2) { /* ignore */ }
+        res.status(500).json({ success: false, error: error.message });
     }
 });
 
-// 3. Get Current Case
-app.get('/api/case', async (req, res) => {
-    try {
-        const caseDoc = await db.collection('cases').doc('current').get();
-
-        if (!caseDoc.exists) {
-            return res.status(404).json({ error: 'No active case' });
-        }
-
-        res.json({
-            success: true,
-            case: caseDoc.data()
-        });
-
-    } catch (error) {
-        console.error('Error fetching case:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 4. Get Evaluations
-app.get('/api/evaluations', async (req, res) => {
-    try {
-        const snapshot = await db.collection('evaluations').get();
-        const evaluations = [];
-
-        snapshot.forEach(doc => {
-            evaluations.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-
-        res.json({
-            success: true,
-            evaluations: evaluations
-        });
-
-    } catch (error) {
-        console.error('Error fetching evaluations:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 5. Get Responses
-app.get('/api/responses', async (req, res) => {
-    try {
-        const snapshot = await db.collection('responses').get();
-        const responses = [];
-
-        snapshot.forEach(doc => {
-            responses.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-
-        res.json({
-            success: true,
-            responses: responses
-        });
-
-    } catch (error) {
-        console.error('Error fetching responses:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// 6. Get Winners
+// ==================== DİĞER YARDIMCI UÇLAR ====================
 app.get('/api/winners', async (req, res) => {
     try {
-        const snapshot = await db.collection('winners').get();
+        const snapshot = await db.collection('winners').orderBy('case_number').get();
         const winners = [];
-
-        snapshot.forEach(doc => {
-            winners.push({
-                id: doc.id,
-                ...doc.data()
-            });
-        });
-
-        res.json({
-            success: true,
-            winners: winners,
-            total_prize: winners.length * 20000
-        });
-
+        snapshot.forEach(doc => winners.push({ id: doc.id, ...doc.data() }));
+        res.json({ success: true, winners, total_prize: winners.length * 20000 });
     } catch (error) {
-        console.error('Error fetching winners:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok' });
 });
 
-// Error handling middleware
+// ==================== STATİK DOSYALAR (frontend) ====================
+app.use(express.static(path.join(__dirname, '../public')));
+
+app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// ==================== HATA YÖNETİMİ ====================
 app.use((err, req, res, next) => {
     console.error(err);
     res.status(500).json({ error: err.message });
 });
 
-// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
