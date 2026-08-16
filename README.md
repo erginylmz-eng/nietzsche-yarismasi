@@ -6,10 +6,11 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 
 - **🔐 Google OAuth**: Google hesabıyla güvenli giriş
 - **👀 Canlı Katılımcı Paneli**: Yönetici, kayıt olan katılımcıları anlık görür
-- **🤖 AI-Destekli Vaka Üretimi**: Yarışma başlatıldığı anda Claude API, önceden kimsenin bilmediği bir vaka üretir — yönetici de dahil herkes vakayı aynı anda görür
+- **🤖 AI-Destekli Vaka Üretimi**: Yarışma başlatıldığı anda Gemini API, önceden kimsenin bilmediği bir vaka üretir — yönetici de dahil herkes vakayı aynı anda görür
 - **⏱️ Real-time Timer**: 30 dakikalık çalışma süresi, sayfa yenilense bile doğru kalır
 - **⏳ Bekleme Ekranı**: Bir katılımcı cevabını gönderdiğinde diğerlerinin bitirmesini bekler
-- **📊 Otomatik Değerlendirme**: Tüm katılımcılar cevaplayınca (veya süre dolunca) Claude AI otomatik olarak puanlar
+- **📊 Otomatik Değerlendirme**: Tüm katılımcılar cevaplayınca (veya süre dolunca) Gemini AI otomatik olarak puanlar
+- **💸 Ücretsiz**: Gemini API'nin ücretsiz katmanı kullanılıyor — kredi kartı ya da ödeme gerekmez
 - **🏆 Ödüllendirme**: Vaka başına en iyi cevaba 20.000 TL, kazanan otomatik belirlenir
 - **📱 Responsive Design**: Tüm cihazlarda uyumlu arayüz
 
@@ -17,10 +18,10 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 
 1. Admin ve katılımcılar Google ile giriş yapar. Admin panelinde kimlerin bağlı olduğu canlı görünür.
 2. Admin "Yapay Zekadan Yeni Vaka İste ve Yarışmayı Başlat" butonuna basar.
-3. Sunucu (backend), Claude API'yi çağırarak o an, özgün bir vaka üretir ve Firestore'a yazar. Bu an itibarıyla hem admin hem tüm katılımcılar vakayı aynı anda görür — önceden kimse bilmez.
+3. Sunucu (backend), Gemini API'yi çağırarak o an, özgün bir vaka üretir ve Firestore'a yazar. Bu an itibarıyla hem admin hem tüm katılımcılar vakayı aynı anda görür — önceden kimse bilmez.
 4. Katılımcı ekranında 30 dakikalık geri sayım başlar; herkes kendi cevabını metin kutusuna yazar.
 5. Bir katılımcı "Cevabı Gönder"e bastığında ekranı "diğer katılımcıları bekliyoruz (X / Y cevapladı)" durumuna geçer.
-6. **Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda)** sistem otomatik olarak Claude API'ye her cevabı gönderir, 4 kritere göre puanlar (0-25 puan x 4 = 100 puan) ve en yüksek puanı alanı o vakanın kazananı ilan eder (20.000 TL).
+6. **Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda)** sistem otomatik olarak Gemini API'ye her cevabı gönderir, 4 kritere göre puanlar (0-25 puan x 4 = 100 puan) ve en yüksek puanı alanı o vakanın kazananı ilan eder (20.000 TL).
 7. Sonuçlar hem admin panelinde hem katılımcı ekranında canlı olarak belirir.
 8. Admin bir sonraki vaka için tekrar "Yeni Vaka İste ve Başlat" butonuna basar (7 vaka için 7 kez).
 
@@ -30,7 +31,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 
 - Node.js 18+
 - Firebase projesi (Firestore + Google Authentication açık)
-- Anthropic (Claude) API key — https://console.anthropic.com/settings/keys
+- Gemini API key (ücretsiz) — https://aistudio.google.com/apikey
 - Railway hesabı (deployment için)
 
 ### 2. Firebase Setup
@@ -46,11 +47,13 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 Railway projende **Variables** sekmesine şunları ekle (kod içine ASLA yazılmaz, sadece Railway'e):
 
 ```
-ANTHROPIC_API_KEY=sk-ant-...
+GEMINI_API_KEY=AIza...
 FIREBASE_PROJECT_ID=nietzsche-yarismasi
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@nietzsche-yarismasi.iam.gserviceaccount.com
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
+
+`GEMINI_API_KEY` için https://aistudio.google.com/apikey adresinden Google hesabınla saniyeler içinde ücretsiz bir key alabilirsin — kredi kartı istemez. Bir fatura hesabı bağlamadığın sürece ücretsiz katmanda kalırsın.
 
 `FIREBASE_PRIVATE_KEY` değerini service account JSON dosyasındaki `private_key` alanından **tırnaklarıyla birlikte** kopyala (içindeki `\n` karakterleri olduğu gibi kalsın).
 
@@ -79,10 +82,10 @@ Railway, push sonrası otomatik olarak yeniden deploy eder. Environment variable
 ## 📐 API Endpoints
 
 ### POST `/api/start-round`
-Yeni bir vaka üretir (Claude ile), Firestore'a yazar, yarışmayı başlatır. Sadece admin panelindeki buton çağırır.
+Yeni bir vaka üretir (Gemini ile), Firestore'a yazar, yarışmayı başlatır. Sadece admin panelindeki buton çağırır.
 
 ### POST `/api/evaluate-round`
-Aktif vakanın tüm katılımcıları cevapladıysa (ya da süre dolduysa) cevapları Claude ile değerlendirir, kazananı belirler. Katılımcı tarafında cevap gönderildiğinde ve süre dolduğunda otomatik çağrılır — çakışan çağrılara karşı sunucu tarafında kilitlenir (aynı vaka iki kez değerlendirilmez).
+Aktif vakanın tüm katılımcıları cevapladıysa (ya da süre dolduysa) cevapları Gemini ile değerlendirir, kazananı belirler. Katılımcı tarafında cevap gönderildiğinde ve süre dolduğunda otomatik çağrılır — çakışan çağrılara karşı sunucu tarafında kilitlenir (aynı vaka iki kez değerlendirilmez). Gemini'nin ücretsiz katman dakikalık istek sınırına takılırsa otomatik olarak kısa bekleyip yeniden dener.
 
 ### GET `/api/winners`
 Tüm vakaların kazananlarını ve toplam ödül tutarını döner.
@@ -93,7 +96,7 @@ Tüm vakaların kazananlarını ve toplam ödül tutarını döner.
 - **Backend**: Node.js, Express.js (`backend/api.js`) — statik dosyaları da aynı sunucudan sunar
 - **Database**: Firebase Firestore (gerçek zamanlı senkronizasyon)
 - **Auth**: Firebase Authentication + Google OAuth
-- **AI**: Claude API (Anthropic), `claude-sonnet-5` modeli — hem vaka üretimi hem değerlendirme için
+- **AI**: Gemini API (Google), `gemini-2.5-flash` modeli, ücretsiz katman — hem vaka üretimi hem değerlendirme için
 - **Deployment**: Railway (tek servis)
 
 ## 📝 Değerlendirme Kriterleri
@@ -120,9 +123,10 @@ Sayfanın en altındaki siyah/yeşil **Sistem Günlüğü** kutusu her ekranda (
 ### Google girişinde "unauthorized-domain" hatası
 - Firebase Console → Authentication → Settings → Authorized domains kısmına Railway domain'ini ekle
 
-### Claude API hatası (vaka üretilmiyor / değerlendirme yapılmıyor)
-- Railway Variables'da `ANTHROPIC_API_KEY` doğru mu kontrol et
+### Gemini API hatası (vaka üretilmiyor / değerlendirme yapılmıyor)
+- Railway Variables'da `GEMINI_API_KEY` doğru mu kontrol et (https://aistudio.google.com/apikey adresinden alınmış olmalı)
 - Railway'deki **Deploy Logs**'a bak — backend konsola hatayı yazar
+- Ücretsiz katmanın dakikalık istek sınırına takılırsa sistem otomatik tekrar dener; sürekli tekrarlıyorsa birkaç dakika bekleyip tekrar dene
 
 ### Vaka görünmüyor / yarışma başlamıyor
 - Admin panelindeki Sistem Günlüğü'nde "Vaka başlatma hatası" var mı bak
