@@ -488,9 +488,21 @@
         };
 
         // ==================== HELPERS ====================
+        const SCREEN_CLASSES = {
+            login: 'login-screen',
+            admin: 'admin-panel',
+            participant: 'participant-screen'
+        };
+
         function showScreen(screen) {
             document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-            document.querySelector('.' + screen + '-screen').classList.add('active');
+            const className = SCREEN_CLASSES[screen];
+            const el = document.querySelector('.' + className);
+            if (el) {
+                el.classList.add('active');
+            } else {
+                addDebugLog("✗ Screen not found: " + screen);
+            }
         }
 
         // ==================== ADMIN PANEL ====================
@@ -498,7 +510,7 @@
             db.collection('participants').onSnapshot(snapshot => {
                 const list = document.getElementById('participantsList');
                 list.innerHTML = '';
-                let allReady = true;
+                let allReady = snapshot.size > 0;
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
