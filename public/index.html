@@ -368,16 +368,28 @@
                     const db = firebase.firestore();
 
                     // Google OAuth - initialize and render immediately
-                    google.accounts.id.initialize({
-                        client_id: GOOGLE_CLIENT_ID,
-                        callback: handleCredentialResponse
-                    });
-                    google.accounts.id.renderButton(
-                        document.getElementById('googleLoginBtn'),
-                        { theme: 'filled_blue', size: 'large' }
-                    );
+                    console.log("Initializing Google OAuth with client_id:", GOOGLE_CLIENT_ID);
+                    try {
+                        google.accounts.id.initialize({
+                            client_id: GOOGLE_CLIENT_ID,
+                            callback: handleCredentialResponse
+                        });
+                        console.log("Google OAuth initialized successfully");
+
+                        const btnElement = document.getElementById('googleLoginBtn');
+                        console.log("Google button element:", btnElement);
+
+                        google.accounts.id.renderButton(
+                            btnElement,
+                            { theme: 'filled_blue', size: 'large' }
+                        );
+                        console.log("Google button rendered successfully");
+                    } catch (err) {
+                        console.error("Google OAuth error:", err);
+                    }
 
                     function handleCredentialResponse(response) {
+                        console.log("Google sign-in response received");
                         // Parse JWT
                         const token = response.credential;
                         const base64Url = token.split('.')[1];
@@ -387,15 +399,28 @@
                         }).join(''));
                         const userData = JSON.parse(jsonPayload);
 
-                        // Sign in with Google
-                        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-                            .then(result => {
-                                setupSession(result.user);
-                            })
-                            .catch(error => {
-                                console.error("Auth error:", error);
-                                alert("Giriş başarısız: " + error.message);
-                            });
+                        // Create user object from Google JWT
+                        const userObject = {
+                            uid: userData.sub,
+                            email: userData.email,
+                            displayName: userData.name,
+                            photoURL: userData.picture
+                        };
+
+                        // Store in session and Firestore
+                        db.collection('participants').doc(userData.sub).set({
+                            name: userData.name || 'Katılımcı',
+                            email: userData.email,
+                            photoURL: userData.picture,
+                            status: 'connected',
+                            connected_at: new Date(),
+                            idToken: token
+                        }, { merge: true }).then(() => {
+                            setupSession(userObject);
+                        }).catch(error => {
+                            console.error("Firestore error:", error);
+                            alert("Giriş başarısız: " + error.message);
+                        });
                     }
 
                     function setupSession(user) {
