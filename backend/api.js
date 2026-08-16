@@ -1,9 +1,13 @@
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const admin = require('firebase-admin');
-const Anthropic = require('@anthropic-ai/sdk');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import admin from 'firebase-admin';
+import { GoogleGenAI } from '@google/genai';
+import 'dotenv/config';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 app.use(cors());
@@ -25,15 +29,39 @@ admin.initializeApp({
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 
-// ==================== CLAUDE ====================
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-const MODEL = 'claude-sonnet-5';
+// ==================== GEMINI (ÜCRETSİZ KATMAN) ====================
+// API key: https://aistudio.google.com/apikey adresinden ücretsiz alınır,
+// kredi kartı gerektirmez. Fatura hesabı bağlamadığın sürece ücretsiz katmanda kalır.
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const MODEL = 'gemini-2.5-flash';
 
 const THEMES = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
 const ROUND_DURATION_MS = 30 * 60 * 1000;
 
-function extractText(message) {
-    return message.content.filter(b => b.type === 'text').map(b => b.text).join('\n');
+// Ücretsiz katmanın dakikalık istek sınırına takılırsak kısa bekleyip tekrar dene
+async function callGemini(prompt, maxRetries = 3) {
+    let lastError;
+    for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+            const response = await ai.models.generateContent({
+                model: MODEL,
+                contents: prompt
+            });
+            return response.text;
+        } catch (error) {
+            lastError = error;
+            const status = error?.status || error?.code;
+            const isRateLimit = status === 429 || /rate.?limit|quota/i.test(error?.message || '');
+            if (isRateLimit && attempt < maxRetries - 1) {
+                const waitMs = 3000 * (attempt + 1);
+                console.log(`Gemini rate limit, ${waitMs}ms bekleyip tekrar deneniyor...`);
+                await new Promise(r => setTimeout(r, waitMs));
+                continue;
+            }
+            throw error;
+        }
+    }
+    throw lastError;
 }
 
 async function pickTheme() {
@@ -63,13 +91,7 @@ Vaka 250-400 kelime uzunluğunda, akıcı bir anlatı olarak yazılsın (madde i
 
 Sadece vakanın kendisini yaz, başka açıklama ekleme. İlk satırda kısa, çarpıcı bir başlık olsun (örn: "Terfi Kararı"), sonrasında vaka metni gelsin.`;
 
-    const message = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 1200,
-        messages: [{ role: 'user', content: prompt }]
-    });
-
-    const raw = extractText(message).trim();
+    const raw = (await callGemini(prompt)).trim();
     const lines = raw.split('\n').filter(l => l.trim().length > 0);
     const title = lines[0]?.replace(/^#+\s*/, '').trim() || theme;
     const content = lines.slice(1).join('\n\n').trim() || raw;
@@ -92,7 +114,7 @@ ${response.answer}
 3. Mantıksal Tutarlılık
 4. Kurumsal/Pratik Uygulanabilirlik
 
-SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama ekleme:
+SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama ekleme, markdown code fence kullanma:
 {
   "total_score": 0,
   "criteria": {
@@ -106,13 +128,7 @@ SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama eklem
   "general_evaluation": "Genel değerlendirme (2-3 cümle)"
 }`;
 
-    const message = await anthropic.messages.create({
-        model: MODEL,
-        max_tokens: 1000,
-        messages: [{ role: 'user', content: prompt }]
-    });
-
-    const text = extractText(message);
+    const text = await callGemini(prompt);
     let evaluation = null;
     try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -301,5 +317,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
-
-module.exports = app;
