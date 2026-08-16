@@ -382,6 +382,7 @@
         let firebaseDB = null;
 
         // ==================== INITIALIZE FIREBASE ====================
+<<<<<<< HEAD
         addDebugLog("Firebase script yüklemeye başlıyorum...");
 
         // Load all scripts with error handling
@@ -417,6 +418,32 @@
                 script.onload = () => {
                     addDebugLog("✓ Loaded: " + src.split('/').pop());
                     resolve();
+=======
+        const script = document.createElement('script');
+        script.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.min.js";
+        script.onload = () => {
+            const script2 = document.createElement('script');
+            script2.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-auth-compat.min.js";
+            script2.onload = () => {
+                const script3 = document.createElement('script');
+                script3.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.min.js";
+                script3.onload = () => {
+                    try {
+                        firebase.initializeApp(firebaseConfig);
+                        firebaseAuth = firebase.auth();
+                        firebaseDB = firebase.firestore();
+
+                        addDebugLog("✓ Firebase initialized");
+                        addDebugLog("✓ Ready to sign in");
+
+                        // Enable Google Sign-In button
+                        const btn = document.getElementById('googleSignInBtn');
+                        btn.disabled = false;
+                        btn.innerHTML = '<span>🔐</span><span>Google ile Giriş Yap</span>';
+                    } catch (err) {
+                        addDebugLog("✗ Firebase error: " + err.message);
+                    }
+>>>>>>> d2d16537ef18b8536b2afcdb0190ca4e7c441553
                 };
                 script.onerror = () => {
                     addDebugLog("✗ Failed to load: " + src);
@@ -425,6 +452,67 @@
                 document.head.appendChild(script);
             });
         }
+
+        // ==================== GOOGLE SIGN-IN ====================
+        async function signInWithGoogle() {
+            addDebugLog("Google Sign-In başlatılıyor...");
+
+            if (!firebaseAuth) {
+                addDebugLog("✗ Firebase henüz yüklenmedi");
+                alert("Sistem henüz hazır değil. Lütfen sayfayı yeniле.");
+                return;
+            }
+
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                addDebugLog("✓ Google provider oluşturuldu");
+
+                const result = await firebaseAuth.signInWithPopup(provider);
+                addDebugLog("✓ Google login başarılı");
+
+                const user = result.user;
+                addDebugLog("✓ Email: " + user.email);
+
+                // Firestore'a kaydet
+                firebaseDB.collection('participants').doc(user.uid).set({
+                    name: user.displayName || 'Katılımcı',
+                    email: user.email,
+                    photoURL: user.photoURL,
+                    status: 'connected',
+                    connected_at: new Date()
+                }, { merge: true });
+
+                setupSession(user);
+            } catch (error) {
+                addDebugLog("✗ Hata: " + error.code);
+                addDebugLog("✗ Mesaj: " + error.message);
+                alert("Giriş başarısız: " + error.message);
+            }
+        }
+
+        function setupSession(user) {
+            addDebugLog("Oturum açıldı: " + user.email);
+            const isAdmin = user.email === ADMIN_EMAIL;
+
+            if (isAdmin) {
+                addDebugLog("✓ Admin olarak giriş yapıldı");
+                showScreen('admin');
+                document.getElementById('adminUserInfo').textContent = `Admin: ${user.email}`;
+                setupAdminPanel(firebaseDB, user);
+            } else {
+                addDebugLog("✓ Katılımcı olarak giriş yapıldı");
+                showScreen('participant');
+                document.getElementById('participantUserInfo').textContent = `Katılımcı: ${user.email}`;
+                setupParticipantScreen(firebaseDB, user);
+            }
+        }
+
+        window.logout = function() {
+            firebaseAuth.signOut().then(() => {
+                showScreen('login');
+                addDebugLog("Çıkış yapıldı");
+            });
+        };
 
         // ==================== GOOGLE SIGN-IN ====================
         async function signInWithGoogle() {
