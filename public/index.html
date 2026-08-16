@@ -67,6 +67,8 @@
 
         #googleLoginBtn {
             margin-top: 20px;
+            display: flex;
+            justify-content: center;
         }
 
         /* ADMIN PANEL */
@@ -268,13 +270,7 @@
         <div class="login-screen screen active">
             <h2>Hoş Geldiniz</h2>
             <p style="margin-bottom: 30px; color: #666;">Google hesabınızla giriş yapın</p>
-<<<<<<< HEAD
             <div id="googleLoginBtn"></div>
-=======
-            <button id="googleLoginBtn" onclick="handleGoogleLogin()" style="background: #4285f4; padding: 15px 40px; font-size: 16px;">
-    🔵 Google ile Giriş Yap
-</button>
->>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
         </div>
 
         <!-- ADMIN PANEL -->
@@ -290,7 +286,6 @@
             <div class="case-container">
                 <h3>Katılımcı Durumu</h3>
                 <div class="participants-grid" id="participantsList"></div>
-<<<<<<< HEAD
             </div>
 
             <div style="text-align: center;">
@@ -337,66 +332,11 @@
                     <p>Diğer katılımcıların cevaplarını bekliyor...</p>
                 </div>
             </div>
-=======
-            </div>
-            function handleGoogleLogin() {
-            google.accounts.id.renderButton(
-            document.getElementById('googleLoginBtn'),
-        { theme: 'filled_blue', size: 'large' }
-    );
-    google.accounts.id.prompt();
-}
-            <div style="text-align: center;">
-                <button id="startButton" onclick="startCompetition()" style="width: auto; padding: 15px 50px; font-size: 16px;" disabled>
-                    Yarışmayı Başlat
-                </button>
-            </div>
-
-            <div id="evaluationResults" style="margin-top: 40px; display: none;">
-                <h3>Değerlendirme Sonuçları</h3>
-                <div id="resultsContainer"></div>
-            </div>
-        </div>
-
-        <!-- PARTICIPANT SCREEN -->
-        <div class="participant-screen screen">
-            <div class="clearfix">
-                <h2 style="float: left;">Yarışma Alanı</h2>
-                <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
-            </div>
-            <div style="clear: both;"></div>
-
-            <div class="user-info" id="participantUserInfo"></div>
-
-            <div id="waitingArea" class="waiting-message">
-                <p>⏳ Yönetici yarışmayı başlatmayı bekliyor...</p>
-            </div>
-
-            <div id="competitionArea" style="display: none;">
-                <div class="timer" id="timer">30:00</div>
-
-                <div class="case-container">
-                    <h3>Vaka</h3>
-                    <div class="case-text" id="caseContent">Vaka yükleniyor...</div>
-                </div>
-
-                <h3>Nietzsche Perspektifinden Cevabınız</h3>
-                <textarea id="answerTextarea" placeholder="Friedrich Nietzsche'nin felsefesine göre bu vakaya nasıl yaklaşırdı? Detaylı olarak açıklayın..." maxlength="5000"></textarea>
-                <div class="char-count"><span id="charCount">0</span> / 5000 karakter</div>
-                <button class="submit-btn" id="submitButton" onclick="submitAnswer()">Cevabı Gönder</button>
-
-                <div class="submitted-message" id="submittedMessage">
-                    <h3>✓ Cevabınız Gönderildi</h3>
-                    <p>Diğer katılımcıların cevaplarını bekliyor...</p>
-                </div>
-            </div>
->>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
         </div>
     </div>
 
     <script>
         // ==================== CONFIGURATION ====================
-        // BURAYA FIREBASE CONFIG'I YAPISTIR:
         const firebaseConfig = {
             apiKey: "AIzaSyAJaW8D4_ercI-h3WnYWNT4vbt84cS7cj8",
             authDomain: "nietzsche-yarismasi.firebaseapp.com",
@@ -406,14 +346,10 @@
             appId: "BURAYA_YAPISTIR"
         };
 
-        // BURAYA GOOGLE CLIENT ID'NI YAPISTIR:
         const GOOGLE_CLIENT_ID = "146823986268-ic4k22a3m834qgk4uukab0338662n9pu.apps.googleusercontent.com";
-
-        // Admin email
         const ADMIN_EMAIL = "erginylmz@gmail.com";
 
         // ==================== INITIALIZE FIREBASE ====================
-        // Firebase SDK'sını dinamik olarak yükle
         const script = document.createElement('script');
         script.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.min.js";
         script.onload = () => {
@@ -423,28 +359,22 @@
                 const script3 = document.createElement('script');
                 script3.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.min.js";
                 script3.onload = () => {
-                    // Firebase initialize
                     firebase.initializeApp(firebaseConfig);
                     const auth = firebase.auth();
                     const db = firebase.firestore();
 
-<<<<<<< HEAD
-                    // Google OAuth - initialize and render immediately
+                    console.log("Firebase initialized successfully");
                     console.log("Initializing Google OAuth with client_id:", GOOGLE_CLIENT_ID);
+
                     try {
-=======
-                    // Google OAuth
-                    window.onload = function() {
->>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
                         google.accounts.id.initialize({
                             client_id: GOOGLE_CLIENT_ID,
                             callback: handleCredentialResponse
                         });
-<<<<<<< HEAD
-                        console.log("Google OAuth initialized successfully");
+                        console.log("Google OAuth initialized");
 
                         const btnElement = document.getElementById('googleLoginBtn');
-                        console.log("Google button element:", btnElement);
+                        console.log("Rendering Google button in element:", btnElement);
 
                         google.accounts.id.renderButton(
                             btnElement,
@@ -452,21 +382,12 @@
                         );
                         console.log("Google button rendered successfully");
                     } catch (err) {
-                        console.error("Google OAuth error:", err);
+                        console.error("Google OAuth initialization error:", err);
                     }
 
                     function handleCredentialResponse(response) {
                         console.log("Google sign-in response received");
-=======
-                        google.accounts.id.renderButton(
-                            document.getElementById('googleLoginBtn'),
-                            { theme: 'filled_blue', size: 'large' }
-                        );
-                    };
 
-                    function handleCredentialResponse(response) {
->>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
-                        // Parse JWT
                         const token = response.credential;
                         const base64Url = token.split('.')[1];
                         const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -475,8 +396,8 @@
                         }).join(''));
                         const userData = JSON.parse(jsonPayload);
 
-<<<<<<< HEAD
-                        // Create user object from Google JWT
+                        console.log("Parsed user data:", userData);
+
                         const userObject = {
                             uid: userData.sub,
                             email: userData.email,
@@ -484,7 +405,6 @@
                             photoURL: userData.picture
                         };
 
-                        // Store in session and Firestore
                         db.collection('participants').doc(userData.sub).set({
                             name: userData.name || 'Katılımcı',
                             email: userData.email,
@@ -493,46 +413,38 @@
                             connected_at: new Date(),
                             idToken: token
                         }, { merge: true }).then(() => {
+                            console.log("User saved to Firestore");
                             setupSession(userObject);
                         }).catch(error => {
                             console.error("Firestore error:", error);
                             alert("Giriş başarısız: " + error.message);
                         });
-=======
-                        // Sign in with Google
-                        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-                            .then(result => {
-                                setupSession(result.user);
-                            })
-                            .catch(error => {
-                                console.error("Auth error:", error);
-                                alert("Giriş başarısız: " + error.message);
-                            });
->>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
                     }
 
                     function setupSession(user) {
+                        console.log("Setting up session for:", user.email);
                         const isAdmin = user.email === ADMIN_EMAIL;
 
                         if (isAdmin) {
+                            console.log("Admin detected");
                             showScreen('admin');
                             document.getElementById('adminUserInfo').textContent = `Admin: ${user.email}`;
                             setupAdminPanel(db, user);
                         } else {
+                            console.log("Participant detected");
                             showScreen('participant');
                             document.getElementById('participantUserInfo').textContent = `Katılımcı: ${user.email}`;
                             setupParticipantScreen(db, user);
                         }
                     }
 
-                    // Logout
                     window.logout = function() {
                         auth.signOut().then(() => {
                             showScreen('login');
+                            console.log("Logged out");
                         });
                     };
 
-                    // Auth state listener
                     auth.onAuthStateChanged(user => {
                         if (!user) {
                             showScreen('login');
@@ -553,7 +465,6 @@
 
         // ==================== ADMIN PANEL ====================
         function setupAdminPanel(db, user) {
-            // Listen to participants
             db.collection('participants').onSnapshot(snapshot => {
                 const list = document.getElementById('participantsList');
                 list.innerHTML = '';
@@ -590,7 +501,6 @@
 
         // ==================== PARTICIPANT SCREEN ====================
         function setupParticipantScreen(db, user) {
-            // Register as connected
             db.collection('participants').doc(user.uid).set({
                 name: user.displayName || 'Katılımcı',
                 email: user.email,
@@ -598,7 +508,6 @@
                 connected_at: new Date()
             }, { merge: true });
 
-            // Listen for session start
             db.collection('session').doc('current').onSnapshot(doc => {
                 if (doc.data()?.status === 'started') {
                     document.getElementById('waitingArea').style.display = 'none';
@@ -608,7 +517,6 @@
                 }
             });
 
-            // Character count
             document.getElementById('answerTextarea').addEventListener('input', function() {
                 document.getElementById('charCount').textContent = this.value.length;
             });
@@ -642,7 +550,7 @@
 
         function submitAnswer() {
             const db = firebase.firestore();
-            const user = firebase.auth().currentUser;
+            const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
             const answer = document.getElementById('answerTextarea').value;
 
             if (!answer.trim()) {
