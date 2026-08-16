@@ -268,7 +268,13 @@
         <div class="login-screen screen active">
             <h2>Hoş Geldiniz</h2>
             <p style="margin-bottom: 30px; color: #666;">Google hesabınızla giriş yapın</p>
+<<<<<<< HEAD
             <div id="googleLoginBtn"></div>
+=======
+            <button id="googleLoginBtn" onclick="handleGoogleLogin()" style="background: #4285f4; padding: 15px 40px; font-size: 16px;">
+    🔵 Google ile Giriş Yap
+</button>
+>>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
         </div>
 
         <!-- ADMIN PANEL -->
@@ -284,6 +290,7 @@
             <div class="case-container">
                 <h3>Katılımcı Durumu</h3>
                 <div class="participants-grid" id="participantsList"></div>
+<<<<<<< HEAD
             </div>
 
             <div style="text-align: center;">
@@ -330,6 +337,60 @@
                     <p>Diğer katılımcıların cevaplarını bekliyor...</p>
                 </div>
             </div>
+=======
+            </div>
+            function handleGoogleLogin() {
+            google.accounts.id.renderButton(
+            document.getElementById('googleLoginBtn'),
+        { theme: 'filled_blue', size: 'large' }
+    );
+    google.accounts.id.prompt();
+}
+            <div style="text-align: center;">
+                <button id="startButton" onclick="startCompetition()" style="width: auto; padding: 15px 50px; font-size: 16px;" disabled>
+                    Yarışmayı Başlat
+                </button>
+            </div>
+
+            <div id="evaluationResults" style="margin-top: 40px; display: none;">
+                <h3>Değerlendirme Sonuçları</h3>
+                <div id="resultsContainer"></div>
+            </div>
+        </div>
+
+        <!-- PARTICIPANT SCREEN -->
+        <div class="participant-screen screen">
+            <div class="clearfix">
+                <h2 style="float: left;">Yarışma Alanı</h2>
+                <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
+            </div>
+            <div style="clear: both;"></div>
+
+            <div class="user-info" id="participantUserInfo"></div>
+
+            <div id="waitingArea" class="waiting-message">
+                <p>⏳ Yönetici yarışmayı başlatmayı bekliyor...</p>
+            </div>
+
+            <div id="competitionArea" style="display: none;">
+                <div class="timer" id="timer">30:00</div>
+
+                <div class="case-container">
+                    <h3>Vaka</h3>
+                    <div class="case-text" id="caseContent">Vaka yükleniyor...</div>
+                </div>
+
+                <h3>Nietzsche Perspektifinden Cevabınız</h3>
+                <textarea id="answerTextarea" placeholder="Friedrich Nietzsche'nin felsefesine göre bu vakaya nasıl yaklaşırdı? Detaylı olarak açıklayın..." maxlength="5000"></textarea>
+                <div class="char-count"><span id="charCount">0</span> / 5000 karakter</div>
+                <button class="submit-btn" id="submitButton" onclick="submitAnswer()">Cevabı Gönder</button>
+
+                <div class="submitted-message" id="submittedMessage">
+                    <h3>✓ Cevabınız Gönderildi</h3>
+                    <p>Diğer katılımcıların cevaplarını bekliyor...</p>
+                </div>
+            </div>
+>>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
         </div>
     </div>
 
@@ -367,13 +428,19 @@
                     const auth = firebase.auth();
                     const db = firebase.firestore();
 
+<<<<<<< HEAD
                     // Google OAuth - initialize and render immediately
                     console.log("Initializing Google OAuth with client_id:", GOOGLE_CLIENT_ID);
                     try {
+=======
+                    // Google OAuth
+                    window.onload = function() {
+>>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
                         google.accounts.id.initialize({
                             client_id: GOOGLE_CLIENT_ID,
                             callback: handleCredentialResponse
                         });
+<<<<<<< HEAD
                         console.log("Google OAuth initialized successfully");
 
                         const btnElement = document.getElementById('googleLoginBtn');
@@ -390,6 +457,15 @@
 
                     function handleCredentialResponse(response) {
                         console.log("Google sign-in response received");
+=======
+                        google.accounts.id.renderButton(
+                            document.getElementById('googleLoginBtn'),
+                            { theme: 'filled_blue', size: 'large' }
+                        );
+                    };
+
+                    function handleCredentialResponse(response) {
+>>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
                         // Parse JWT
                         const token = response.credential;
                         const base64Url = token.split('.')[1];
@@ -399,6 +475,7 @@
                         }).join(''));
                         const userData = JSON.parse(jsonPayload);
 
+<<<<<<< HEAD
                         // Create user object from Google JWT
                         const userObject = {
                             uid: userData.sub,
@@ -421,6 +498,17 @@
                             console.error("Firestore error:", error);
                             alert("Giriş başarısız: " + error.message);
                         });
+=======
+                        // Sign in with Google
+                        auth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
+                            .then(result => {
+                                setupSession(result.user);
+                            })
+                            .catch(error => {
+                                console.error("Auth error:", error);
+                                alert("Giriş başarısız: " + error.message);
+                            });
+>>>>>>> 696ebe05b45a03d2f9edc355185e373c710d3531
                     }
 
                     function setupSession(user) {
