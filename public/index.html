@@ -69,6 +69,42 @@
             margin-top: 20px;
             display: flex;
             justify-content: center;
+            min-height: 50px;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        #googleLoginBtn > div {
+            display: flex !important;
+        }
+
+        .fallback-btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .fallback-btn:hover {
+            background: #1f51ba;
+        }
+
+        #debugPanel {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 11px;
+            margin-top: 15px;
+            max-height: 100px;
+            overflow-y: auto;
+            font-family: monospace;
+            color: #333;
         }
 
         /* ADMIN PANEL */
@@ -270,7 +306,11 @@
         <div class="login-screen screen active">
             <h2>Hoş Geldiniz</h2>
             <p style="margin-bottom: 30px; color: #666;">Google hesabınızla giriş yapın</p>
-            <div id="googleLoginBtn"></div>
+            <div id="googleLoginBtn">
+                <button class="fallback-btn" onclick="testGoogleSignIn()">🔐 Google ile Giriş Yap (Test)</button>
+            </div>
+            <p id="googleLoadingStatus" style="color: #999; margin-top: 15px; font-size: 12px;">Google butonu yükleniyor...</p>
+            <div id="debugPanel"></div>
         </div>
 
         <!-- ADMIN PANEL -->
@@ -336,6 +376,17 @@
     </div>
 
     <script>
+        // ==================== DEBUG LOGGING ====================
+        function addDebugLog(message) {
+            const panel = document.getElementById('debugPanel');
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = document.createElement('div');
+            logLine.textContent = `[${timestamp}] ${message}`;
+            panel.appendChild(logLine);
+            panel.scrollTop = panel.scrollHeight;
+            console.log(message);
+        }
+
         // ==================== CONFIGURATION ====================
         const firebaseConfig = {
             apiKey: "AIzaSyAJaW8D4_ercI-h3WnYWNT4vbt84cS7cj8",
@@ -363,27 +414,52 @@
                     const auth = firebase.auth();
                     const db = firebase.firestore();
 
-                    console.log("Firebase initialized successfully");
-                    console.log("Initializing Google OAuth with client_id:", GOOGLE_CLIENT_ID);
+                    addDebugLog("Firebase initialized successfully");
+                    addDebugLog("Google object available: " + typeof window.google);
+                    addDebugLog("Client ID: " + GOOGLE_CLIENT_ID);
 
-                    try {
-                        google.accounts.id.initialize({
-                            client_id: GOOGLE_CLIENT_ID,
-                            callback: handleCredentialResponse
-                        });
-                        console.log("Google OAuth initialized");
+                    // Store references globally for debugging
+                    window.firebaseDB = db;
+                    window.firebaseAuth = auth;
 
-                        const btnElement = document.getElementById('googleLoginBtn');
-                        console.log("Rendering Google button in element:", btnElement);
+                    // Wait for google to be available
+                    function initializeGoogle() {
+                        if (typeof window.google === 'undefined') {
+                            addDebugLog("Waiting for Google library... (retry in 100ms)");
+                            setTimeout(initializeGoogle, 100);
+                            return;
+                        }
 
-                        google.accounts.id.renderButton(
-                            btnElement,
-                            { theme: 'filled_blue', size: 'large' }
-                        );
-                        console.log("Google button rendered successfully");
-                    } catch (err) {
-                        console.error("Google OAuth initialization error:", err);
+                        addDebugLog("✓ Google library loaded!");
+                        try {
+                            window.google.accounts.id.initialize({
+                                client_id: GOOGLE_CLIENT_ID,
+                                callback: handleCredentialResponse
+                            });
+                            addDebugLog("✓ Google OAuth initialized");
+
+                            const btnElement = document.getElementById('googleLoginBtn');
+                            addDebugLog("Button element found: " + (btnElement ? "YES" : "NO"));
+
+                            if (btnElement) {
+                                // Try to render button
+                                try {
+                                    window.google.accounts.id.renderButton(
+                                        btnElement,
+                                        { theme: 'filled_blue', size: 'large', width: '300' }
+                                    );
+                                    addDebugLog("✓ Google button rendered successfully");
+                                    document.getElementById('googleLoadingStatus').style.display = 'none';
+                                } catch (renderErr) {
+                                    addDebugLog("✗ Button render failed: " + renderErr.message);
+                                }
+                            }
+                        } catch (err) {
+                            addDebugLog("✗ Google OAuth error: " + err.message);
+                        }
                     }
+
+                    initializeGoogle();
 
                     function handleCredentialResponse(response) {
                         console.log("Google sign-in response received");
@@ -461,6 +537,22 @@
         function showScreen(screen) {
             document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
             document.querySelector('.' + screen + '-screen').classList.add('active');
+        }
+
+        // Test function for fallback button
+        function testGoogleSignIn() {
+            addDebugLog("Test button clicked - attempting Google Sign-In");
+            if (typeof window.google !== 'undefined') {
+                try {
+                    window.google.accounts.id.prompt((notification) => {
+                        addDebugLog("Google prompt response: " + notification.getNotDisplayedReason());
+                    });
+                } catch (err) {
+                    addDebugLog("Error: " + err.message);
+                }
+            } else {
+                addDebugLog("Google library not loaded yet");
+            }
         }
 
         // ==================== ADMIN PANEL ====================
