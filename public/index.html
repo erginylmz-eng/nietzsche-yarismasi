@@ -367,17 +367,15 @@
                     const auth = firebase.auth();
                     const db = firebase.firestore();
 
-                    // Google OAuth
-                    window.onload = function() {
-                        google.accounts.id.initialize({
-                            client_id: GOOGLE_CLIENT_ID,
-                            callback: handleCredentialResponse
-                        });
-                        google.accounts.id.renderButton(
-                            document.getElementById('googleLoginBtn'),
-                            { theme: 'filled_blue', size: 'large' }
-                        );
-                    };
+                    // Google OAuth - initialize and render immediately
+                    google.accounts.id.initialize({
+                        client_id: GOOGLE_CLIENT_ID,
+                        callback: handleCredentialResponse
+                    });
+                    google.accounts.id.renderButton(
+                        document.getElementById('googleLoginBtn'),
+                        { theme: 'filled_blue', size: 'large' }
+                    );
 
                     function handleCredentialResponse(response) {
                         // Parse JWT
