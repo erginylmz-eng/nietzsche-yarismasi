@@ -290,9 +290,9 @@
         <div class="login-screen screen active">
             <h2>Hoş Geldiniz</h2>
             <p style="margin-bottom: 30px; color: #666;">Google hesabınızla giriş yapın</p>
-            <button class="google-btn" onclick="signInWithGoogle()">
-                <span>🔐</span>
-                <span>Google ile Giriş Yap</span>
+            <button class="google-btn" id="googleSignInBtn" onclick="signInWithGoogle()" disabled>
+                <span>⏳</span>
+                <span>Sistem yükleniyor...</span>
             </button>
             <div id="debugPanel"></div>
         </div>
@@ -391,12 +391,21 @@
                 const script3 = document.createElement('script');
                 script3.src = "https://www.gstatic.com/firebasejs/10.0.0/firebase-firestore-compat.min.js";
                 script3.onload = () => {
-                    firebase.initializeApp(firebaseConfig);
-                    firebaseAuth = firebase.auth();
-                    firebaseDB = firebase.firestore();
+                    try {
+                        firebase.initializeApp(firebaseConfig);
+                        firebaseAuth = firebase.auth();
+                        firebaseDB = firebase.firestore();
 
-                    addDebugLog("✓ Firebase initialized");
-                    addDebugLog("✓ Ready to sign in");
+                        addDebugLog("✓ Firebase initialized");
+                        addDebugLog("✓ Ready to sign in");
+
+                        // Enable Google Sign-In button
+                        const btn = document.getElementById('googleSignInBtn');
+                        btn.disabled = false;
+                        btn.innerHTML = '<span>🔐</span><span>Google ile Giriş Yap</span>';
+                    } catch (err) {
+                        addDebugLog("✗ Firebase error: " + err.message);
+                    }
                 };
                 document.head.appendChild(script3);
             };
