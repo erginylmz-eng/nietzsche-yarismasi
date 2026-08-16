@@ -287,7 +287,13 @@
                 <h3>Katılımcı Durumu</h3>
                 <div class="participants-grid" id="participantsList"></div>
             </div>
-
+            function handleGoogleLogin() {
+            google.accounts.id.renderButton(
+            document.getElementById('googleLoginBtn'),
+        { theme: 'filled_blue', size: 'large' }
+    );
+    google.accounts.id.prompt();
+}
             <div style="text-align: center;">
                 <button id="startButton" onclick="startCompetition()" style="width: auto; padding: 15px 50px; font-size: 16px;" disabled>
                     Yarışmayı Başlat
