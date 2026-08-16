@@ -308,14 +308,29 @@
             <div class="user-info" id="adminUserInfo"></div>
 
             <div class="case-container">
-                <h3>Katılımcı Durumu</h3>
+                <h3>1. Adım: Vakayı Gir</h3>
+                <p style="margin-bottom: 10px; color: #666; font-size: 13px;">Yarışmayı başlatmadan önce vaka metnini buraya yapıştır ve kaydet.</p>
+                <input type="text" id="caseThemeInput" placeholder="Tema (örn: Adalet, Eşitlik, Özgürlük, Etik)" style="width: 100%; padding: 12px; border: 2px solid #ddd; border-radius: 8px; margin-bottom: 10px; font-size: 14px;">
+                <textarea id="caseContentInput" placeholder="Vaka metnini buraya yapıştırın..." style="height: 180px;"></textarea>
+                <button onclick="saveCase()" style="margin-top: 10px;">Vakayı Kaydet</button>
+                <span id="caseSaveStatus" style="margin-left: 10px; font-size: 13px; color: #4caf50;"></span>
+            </div>
+
+            <div class="case-container">
+                <h3>2. Adım: Katılımcı Durumu</h3>
                 <div class="participants-grid" id="participantsList"></div>
             </div>
 
             <div style="text-align: center;">
+                <h3 style="margin-bottom: 15px;">3. Adım: Yarışmayı Başlat</h3>
                 <button id="startButton" onclick="startCompetition()" style="width: auto; padding: 15px 50px; font-size: 16px;" disabled>
                     Yarışmayı Başlat
                 </button>
+            </div>
+
+            <div class="case-container" style="margin-top: 30px;">
+                <h3>Gelen Cevaplar (<span id="responseCount">0</span>)</h3>
+                <div id="responsesList"></div>
             </div>
         </div>
 
@@ -506,6 +521,8 @@
         }
 
         // ==================== ADMIN PANEL ====================
+        let currentCaseSaved = false;
+
         function setupAdminPanel(db, user) {
             db.collection('participants').onSnapshot(snapshot => {
                 const list = document.getElementById('participantsList');
@@ -529,19 +546,100 @@
 
                 document.getElementById('startButton').disabled = !allReady;
             });
+
+            // Load existing case into inputs, if any
+            db.collection('cases').doc('current').get().then(doc => {
+                if (doc.exists) {
+                    document.getElementById('caseThemeInput').value = doc.data().theme || '';
+                    document.getElementById('caseContentInput').value = doc.data().content || '';
+                    currentCaseSaved = true;
+                    document.getElementById('caseSaveStatus').textContent = '✓ Kayıtlı vaka yüklendi';
+                }
+            });
+
+            // Listen for incoming responses
+            db.collection('responses').onSnapshot(snapshot => {
+                const list = document.getElementById('responsesList');
+                list.innerHTML = '';
+                document.getElementById('responseCount').textContent = snapshot.size;
+
+                if (snapshot.size === 0) {
+                    list.innerHTML = '<p style="color: #999; font-size: 13px;">Henüz cevap gelmedi.</p>';
+                    return;
+                }
+
+                const responses = [];
+                snapshot.forEach(doc => responses.push(doc.data()));
+                responses.sort((a, b) => (b.case_number || 0) - (a.case_number || 0) || (b.timestamp || 0) - (a.timestamp || 0));
+
+                responses.forEach(data => {
+                    const card = document.createElement('div');
+                    card.style.cssText = 'background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #667eea;';
+                    card.innerHTML = `
+                        <strong>Vaka #${data.case_number || '?'} — ${data.participant_name || ''} (${data.participant_email || 'Bilinmiyor'})</strong>
+                        <p style="margin-top: 8px; color: #555; line-height: 1.5; white-space: pre-wrap;">${data.answer || ''}</p>
+                    `;
+                    list.appendChild(card);
+                });
+            });
         }
 
-        function startCompetition() {
+        async function saveCase() {
+            const theme = document.getElementById('caseThemeInput').value.trim();
+            const content = document.getElementById('caseContentInput').value.trim();
+
+            if (!theme || !content) {
+                alert('Lütfen hem tema hem de vaka metnini girin!');
+                return;
+            }
+
             const db = firebase.firestore();
-            db.collection('session').doc('current').set({
-                status: 'started',
-                startTime: new Date(),
-                duration: 30 * 60 * 1000
-            });
-            alert('Yarışma başlatıldı!');
+            try {
+                const existing = await db.collection('cases').doc('current').get();
+                const nextNumber = existing.exists ? (existing.data().caseNumber || 0) + 1 : 1;
+
+                await db.collection('cases').doc('current').set({
+                    theme: theme,
+                    content: content,
+                    caseNumber: nextNumber,
+                    saved_at: new Date()
+                });
+
+                currentCaseSaved = true;
+                document.getElementById('caseSaveStatus').textContent = `✓ Vaka #${nextNumber} kaydedildi`;
+                addDebugLog("Vaka #" + nextNumber + " kaydedildi");
+            } catch (err) {
+                alert('Vaka kaydedilemedi: ' + err.message);
+            }
+        }
+
+        async function startCompetition() {
+            if (!currentCaseSaved) {
+                alert('Önce vakayı kaydetmelisiniz! (1. Adım)');
+                return;
+            }
+
+            const db = firebase.firestore();
+            try {
+                const caseDoc = await db.collection('cases').doc('current').get();
+                const caseNumber = caseDoc.exists ? (caseDoc.data().caseNumber || 1) : 1;
+
+                await db.collection('session').doc('current').set({
+                    status: 'started',
+                    startTime: new Date(),
+                    duration: 30 * 60 * 1000,
+                    caseNumber: caseNumber
+                });
+                alert(`Vaka #${caseNumber} başlatıldı! Katılımcılar artık vakayı görebilir.`);
+            } catch (err) {
+                alert('Yarışma başlatılamadı: ' + err.message);
+            }
         }
 
         // ==================== PARTICIPANT SCREEN ====================
+        let activeCaseNumber = null;
+        let timerInterval = null;
+
         function setupParticipantScreen(db, user) {
             db.collection('participants').doc(user.uid).set({
                 name: user.displayName || 'Katılımcı',
@@ -551,11 +649,26 @@
             }, { merge: true });
 
             db.collection('session').doc('current').onSnapshot(doc => {
-                if (doc.data()?.status === 'started') {
+                const data = doc.data();
+                if (data?.status === 'started' && data.caseNumber !== activeCaseNumber) {
+                    // Yeni bir vaka başladı (ya da ilk vaka) - ekranı sıfırla
+                    activeCaseNumber = data.caseNumber;
+
                     document.getElementById('waitingArea').style.display = 'none';
                     document.getElementById('competitionArea').style.display = 'block';
+
+                    const textarea = document.getElementById('answerTextarea');
+                    textarea.value = '';
+                    textarea.disabled = false;
+                    document.getElementById('charCount').textContent = '0';
+                    document.getElementById('submitButton').disabled = false;
+                    document.getElementById('submittedMessage').classList.remove('show');
+
                     startTimer();
                     loadCase(db);
+                } else if (!data || data.status !== 'started') {
+                    document.getElementById('waitingArea').style.display = 'block';
+                    document.getElementById('competitionArea').style.display = 'none';
                 }
             });
 
@@ -565,8 +678,10 @@
         }
 
         function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
             let timeLeft = 30 * 60;
-            setInterval(() => {
+            document.getElementById('timer').textContent = '30:00';
+            timerInterval = setInterval(() => {
                 timeLeft--;
                 const minutes = Math.floor(timeLeft / 60);
                 const seconds = timeLeft % 60;
@@ -574,6 +689,7 @@
                     `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
                 if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
                     document.getElementById('submitButton').disabled = true;
                 }
             }, 1000);
@@ -600,9 +716,13 @@
                 return;
             }
 
-            db.collection('responses').doc(user.uid).set({
+            const docId = `case${activeCaseNumber}_${user.uid}`;
+
+            db.collection('responses').doc(docId).set({
                 participant_id: user.uid,
                 participant_email: user.email,
+                participant_name: user.displayName || '',
+                case_number: activeCaseNumber,
                 answer: answer,
                 submitted_at: new Date(),
                 timestamp: Date.now()
@@ -611,6 +731,8 @@
                 document.getElementById('answerTextarea').disabled = true;
                 document.getElementById('submittedMessage').classList.add('show');
                 alert('Cevabınız gönderildi!');
+            }).catch(err => {
+                alert('Cevap gönderilemedi: ' + err.message);
             });
         }
     </script>
