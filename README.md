@@ -5,144 +5,96 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 ## 📋 Özellikler
 
 - **🔐 Google OAuth**: Google hesabıyla güvenli giriş
-- **🤖 AI-Destekli Vaka Oluşturma**: Claude API ile otomatik kurumsal vaka oluşturma
-- **⏱️ Real-time Timer**: 30 dakikalık çalışma süresi
-- **📊 Otomatik Değerlendirme**: Claude AI ile detaylı puanlama ve feedback
-- **🏆 Ödüllendirme**: En iyi cevaplara 20.000 TL ödül
+- **👀 Canlı Katılımcı Paneli**: Yönetici, kayıt olan katılımcıları anlık görür
+- **🤖 AI-Destekli Vaka Üretimi**: Yarışma başlatıldığı anda Claude API, önceden kimsenin bilmediği bir vaka üretir — yönetici de dahil herkes vakayı aynı anda görür
+- **⏱️ Real-time Timer**: 30 dakikalık çalışma süresi, sayfa yenilense bile doğru kalır
+- **⏳ Bekleme Ekranı**: Bir katılımcı cevabını gönderdiğinde diğerlerinin bitirmesini bekler
+- **📊 Otomatik Değerlendirme**: Tüm katılımcılar cevaplayınca (veya süre dolunca) Claude AI otomatik olarak puanlar
+- **🏆 Ödüllendirme**: Vaka başına en iyi cevaba 20.000 TL, kazanan otomatik belirlenir
 - **📱 Responsive Design**: Tüm cihazlarda uyumlu arayüz
+
+## 🧠 Nasıl Çalışır (Akış)
+
+1. Admin ve katılımcılar Google ile giriş yapar. Admin panelinde kimlerin bağlı olduğu canlı görünür.
+2. Admin "Yapay Zekadan Yeni Vaka İste ve Yarışmayı Başlat" butonuna basar.
+3. Sunucu (backend), Claude API'yi çağırarak o an, özgün bir vaka üretir ve Firestore'a yazar. Bu an itibarıyla hem admin hem tüm katılımcılar vakayı aynı anda görür — önceden kimse bilmez.
+4. Katılımcı ekranında 30 dakikalık geri sayım başlar; herkes kendi cevabını metin kutusuna yazar.
+5. Bir katılımcı "Cevabı Gönder"e bastığında ekranı "diğer katılımcıları bekliyoruz (X / Y cevapladı)" durumuna geçer.
+6. **Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda)** sistem otomatik olarak Claude API'ye her cevabı gönderir, 4 kritere göre puanlar (0-25 puan x 4 = 100 puan) ve en yüksek puanı alanı o vakanın kazananı ilan eder (20.000 TL).
+7. Sonuçlar hem admin panelinde hem katılımcı ekranında canlı olarak belirir.
+8. Admin bir sonraki vaka için tekrar "Yeni Vaka İste ve Başlat" butonuna basar (7 vaka için 7 kez).
 
 ## 🚀 Kurulum
 
 ### 1. Gereksinimler
 
 - Node.js 18+
-- npm veya yarn
-- Firebase projesi
-- Claude API key
-- Vercel hesabı (deployment için)
+- Firebase projesi (Firestore + Google Authentication açık)
+- Anthropic (Claude) API key — https://console.anthropic.com/settings/keys
+- Railway hesabı (deployment için)
 
-### 2. Lokal Setup
+### 2. Firebase Setup
 
-```bash
-# Repository'yi klonla
-git clone https://github.com/erginylmz-eng/nietzsche-yarismasi.git
-cd nietzsche-yarismasi
+1. [Firebase Console](https://console.firebase.google.com) → projeni aç
+2. **Firestore Database** oluştur (zaten yoksa)
+3. **Authentication → Sign-in method → Google** etkinleştir
+4. **Authentication → Settings → Authorized domains** kısmına Railway domain'ini ekle (örn. `nietzsche-yarismasi-production.up.railway.app`)
+5. **Proje Ayarları (⚙️) → Service Accounts → Generate New Private Key** — bu indirdiğin JSON dosyasından `project_id`, `client_email`, `private_key` değerlerine ihtiyacın olacak (backend'in Firestore'a admin olarak yazabilmesi için)
 
-# Dependencies'leri yükle
-npm install
-cd backend && npm install
-cd ..
+### 3. Environment Variables (Railway)
+
+Railway projende **Variables** sekmesine şunları ekle (kod içine ASLA yazılmaz, sadece Railway'e):
+
 ```
-
-### 3. Firebase Setup
-
-1. [Firebase Console](https://console.firebase.google.com) aç
-2. Proje oluştur: `Nietzsche Yarismasi`
-3. Firestore Database oluştur
-4. Authentication → Google OAuth etkinleştir
-5. Service Account credentials indir
-6. `.env` dosyası oluştur (`.env.example`'dan kopyala)
-
-### 4. Environment Variables
-
-```bash
-cp .env.example .env
-```
-
-`.env` dosyasını doldur:
-
-```env
 ANTHROPIC_API_KEY=sk-ant-...
 FIREBASE_PROJECT_ID=nietzsche-yarismasi
-FIREBASE_PRIVATE_KEY=...
-FIREBASE_CLIENT_EMAIL=...
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@nietzsche-yarismasi.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
-### 5. Lokal Çalıştırma
+`FIREBASE_PRIVATE_KEY` değerini service account JSON dosyasındaki `private_key` alanından **tırnaklarıyla birlikte** kopyala (içindeki `\n` karakterleri olduğu gibi kalsın).
+
+`.env.example` dosyası tam olarak hangi alanların gerektiğini gösterir.
+
+### 4. Lokal Çalıştırma (opsiyonel)
 
 ```bash
-# Backend server'ını başlat
-cd backend
-node api.js
-
-# Frontend'i ayrı bir terminalde aç
-# public/index.html'i tarayıcıda aç
+npm install
+cp .env.example .env   # .env dosyasını doldur
+npm start               # backend/api.js hem API'yi hem public/ klasörünü aynı porttan sunar
 ```
 
-## 📦 Deployment (Vercel)
+## 📦 Deployment (Railway)
 
-### 1. GitHub'a Push Et
+Bu repo artık **tek bir Node.js sunucusu** olarak çalışır (kök dizindeki `package.json` sayesinde) — hem `/api/...` uçlarını hem `public/index.html`'i aynı Railway servisinden sunar. Ayrı bir statik site / ayrı bir backend servisi gerekmez.
 
 ```bash
 git add .
-git commit -m "Initial setup"
+git commit -m "..."
 git push origin main
 ```
 
-### 2. Vercel'de Import Et
-
-1. [Vercel](https://vercel.com) → "New Project"
-2. GitHub repo'yu seç
-3. "Import" tıkla
-
-### 3. Environment Variables Ekle
-
-Vercel Dashboard → Settings → Environment Variables:
-
-- `ANTHROPIC_API_KEY`
-- `FIREBASE_PROJECT_ID`
-- `FIREBASE_PRIVATE_KEY`
-- `FIREBASE_CLIENT_EMAIL`
-
-### 4. Deploy Et
-
-"Deploy" butonuna tıkla. Vercel otomatik olarak deploy edecek!
-
-## 🎯 Kullanım
-
-### Admin (Ergin Yılmaz)
-
-1. Google ile giriş yap
-2. Katılımcıları bekle
-3. Tüm katılımcılar bağlandığında "Yarışmayı Başlat" tuşuna bas
-4. Cevapları gör ve otomatik değerlendirmeyi takip et
-
-### Katılımcılar (Ömer, İbrahim, Mustafa)
-
-1. Google ile giriş yap
-2. Yönetici süreci başlattığında vaka gösterilir
-3. 30 dakika içinde Nietzsche perspektifinden cevap yaz
-4. "Cevabı Gönder" tuşuna bas
-5. Sonuçları gör
+Railway, push sonrası otomatik olarak yeniden deploy eder. Environment variable'lar (yukarıdaki 4 değer) Railway Dashboard → Variables kısmında bir kez ayarlanır, her deploy'da kalıcıdır.
 
 ## 📐 API Endpoints
 
-### POST `/api/generate-case`
-Yeni bir vaka oluştur
+### POST `/api/start-round`
+Yeni bir vaka üretir (Claude ile), Firestore'a yazar, yarışmayı başlatır. Sadece admin panelindeki buton çağırır.
 
-### POST `/api/evaluate-responses`
-Cevapları değerlendir
-
-### GET `/api/case`
-Mevcut vakayı al
-
-### GET `/api/responses`
-Tüm cevapları al
-
-### GET `/api/evaluations`
-Tüm değerlendirmeleri al
+### POST `/api/evaluate-round`
+Aktif vakanın tüm katılımcıları cevapladıysa (ya da süre dolduysa) cevapları Claude ile değerlendirir, kazananı belirler. Katılımcı tarafında cevap gönderildiğinde ve süre dolduğunda otomatik çağrılır — çakışan çağrılara karşı sunucu tarafında kilitlenir (aynı vaka iki kez değerlendirilmez).
 
 ### GET `/api/winners`
-Kazananları al
+Tüm vakaların kazananlarını ve toplam ödül tutarını döner.
 
 ## 🔧 Teknik Stack
 
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **Backend**: Node.js, Express.js
-- **Database**: Firebase Firestore
+- **Frontend**: HTML5, CSS3, Vanilla JavaScript (tek dosya, `public/index.html`)
+- **Backend**: Node.js, Express.js (`backend/api.js`) — statik dosyaları da aynı sunucudan sunar
+- **Database**: Firebase Firestore (gerçek zamanlı senkronizasyon)
 - **Auth**: Firebase Authentication + Google OAuth
-- **AI**: Claude API (Anthropic)
-- **Deployment**: Vercel
+- **AI**: Claude API (Anthropic), `claude-sonnet-5` modeli — hem vaka üretimi hem değerlendirme için
+- **Deployment**: Railway (tek servis)
 
 ## 📝 Değerlendirme Kriterleri
 
@@ -153,23 +105,28 @@ Kazananları al
 
 ## 🏆 Ödüllendirme
 
-- Her vaka için 1 katılımcı seçilir
+- Her vaka için 1 katılımcı seçilir (en yüksek toplam puan)
 - Ödül: **20.000 TL**
 - Toplam: **7 vaka × 20.000 TL = 140.000 TL**
 
 ## 🐛 Sorun Giderme
 
+Sayfanın en altındaki siyah/yeşil **Sistem Günlüğü** kutusu her ekranda (giriş/admin/katılımcı) görünür ve önemli her adımı (Firestore yazmaları, hata kodları, API çağrı sonuçları) canlı gösterir — ilk bakılacak yer burasıdır.
+
 ### Firebase bağlantısı hatası
-- `.env` dosyasında tüm Firebase credentials'ları kontrol et
-- Private Key'in `\n` karakterleri doğru şekilde formatlanmış mı kontrol et
+- Railway Variables'da `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` doğru mu kontrol et
+- `FIREBASE_PRIVATE_KEY` içindeki `\n` karakterleri bozulmamış mı kontrol et (tırnak içinde kopyalanmalı)
 
-### Claude API hatası
-- API key'in geçerli mi kontrol et
-- Rate limiting'i kontrol et
+### Google girişinde "unauthorized-domain" hatası
+- Firebase Console → Authentication → Settings → Authorized domains kısmına Railway domain'ini ekle
 
-### Vercel deployment hatası
-- Environment variables'ları Vercel Dashboard'da kontrol et
-- Build logs'ları kontrol et
+### Claude API hatası (vaka üretilmiyor / değerlendirme yapılmıyor)
+- Railway Variables'da `ANTHROPIC_API_KEY` doğru mu kontrol et
+- Railway'deki **Deploy Logs**'a bak — backend konsola hatayı yazar
+
+### Vaka görünmüyor / yarışma başlamıyor
+- Admin panelindeki Sistem Günlüğü'nde "Vaka başlatma hatası" var mı bak
+- En az 1 katılımcının "Bağlı" durumda olması gerekir (buton aksi halde pasif kalır)
 
 ## 📧 İletişim
 
