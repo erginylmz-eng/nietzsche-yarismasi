@@ -43,8 +43,9 @@ const THEMES = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
 const ROUND_DURATION_MS = 30 * 60 * 1000;
 const ADMIN_EMAIL = 'erginylmz@gmail.com';
 
-// Ücretsiz katmanın dakikalık istek sınırına takılırsak kısa bekleyip tekrar dene
-async function callGemini(prompt, maxRetries = 3) {
+// Ücretsiz katmanın dakikalık istek sınırına takılırsak ya da Google'ın
+// sunucuları geçici olarak aşırı yüklüyse (503 UNAVAILABLE) kısa bekleyip tekrar dene.
+async function callGemini(prompt, maxRetries = 4) {
     if (!process.env.GEMINI_API_KEY) {
         throw new Error('GEMINI_API_KEY tanımlı değil. Railway → Variables kısmında bu değişkeni ekleyip yeniden deploy et.');
     }
@@ -60,10 +61,16 @@ async function callGemini(prompt, maxRetries = 3) {
         } catch (error) {
             lastError = error;
             const status = error?.status || error?.code;
-            const isRateLimit = status === 429 || /rate.?limit|quota/i.test(error?.message || '');
-            if (isRateLimit && attempt < maxRetries - 1) {
-                const waitMs = 3000 * (attempt + 1);
-                console.log(`Gemini rate limit, ${waitMs}ms bekleyip tekrar deneniyor...`);
+            const message = error?.message || '';
+            const isRetryable =
+                status === 429 || status === 503 ||
+                /rate.?limit|quota/i.test(message) ||
+                /UNAVAILABLE|overloaded|high demand|internal error|try again later/i.test(message);
+
+            if (isRetryable && attempt < maxRetries - 1) {
+                // Kademeli bekleme: 3sn, 6sn, 12sn (üst sınır 12sn)
+                const waitMs = Math.min(3000 * Math.pow(2, attempt), 12000);
+                console.log(`Gemini geçici hata (${status || '?'}), ${waitMs}ms bekleyip tekrar deneniyor (deneme ${attempt + 1}/${maxRetries})...`);
                 await new Promise(r => setTimeout(r, waitMs));
                 continue;
             }
