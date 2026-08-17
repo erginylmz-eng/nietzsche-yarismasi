@@ -13,6 +13,9 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 - **💸 Ücretsiz**: Gemini API'nin ücretsiz katmanı kullanılıyor — kredi kartı ya da ödeme gerekmez
 - **🏆 Ödüllendirme**: Vaka başına en iyi cevaba 20.000 TL, kazanan otomatik belirlenir
 - **📱 Responsive Design**: Tüm cihazlarda uyumlu arayüz
+- **📚 Geçmiş Denemeler**: Paylaşılmış her vaka "Deneme - N" olarak açılır/kapanır bir listede kalıcı olarak saklanır; herkes istediği zaman geri dönüp cevapları/puanları/gerekçeleri tekrar görebilir
+- **✅ Kazanımlar / ❌ Hatalar**: Her değerlendirme artık sadece güçlü yönleri değil, puanın nereden/neden kırıldığını ve kişiye özel gelişim önerisini de ayrı ayrı gösterir
+- **🎓 Eğitimler**: Admin, katılımcılar için eğitim dosyası (~650 KB'a kadar PDF/Word/metin) yükleyebilir; herkes bu eğitimleri okuyabilir ve indirebilir
 
 ## 🧠 Nasıl Çalışır (Akış)
 
@@ -42,6 +45,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 3. **Authentication → Sign-in method → Google** etkinleştir
 4. **Authentication → Settings → Authorized domains** kısmına Railway domain'ini ekle (örn. `nietzsche-yarismasi-production.up.railway.app`)
 5. **Proje Ayarları (⚙️) → Service Accounts → Generate New Private Key** — bu indirdiğin JSON dosyasından `project_id`, `client_email`, `private_key` değerlerine ihtiyacın olacak (backend'in Firestore'a admin olarak yazabilmesi için)
+6. **Firestore Database → Rules** kısmına bu repodaki `firestore.rules` dosyasının tam içeriğini yapıştır ve **Publish**'e bas (Eğitimler özelliği için `trainings` koleksiyonu kuralı eklendi — eskisinin üzerine tamamını yaz)
 
 ### 3. Environment Variables (Railway)
 
