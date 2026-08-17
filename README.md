@@ -15,7 +15,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 - **📱 Responsive Design**: Tüm cihazlarda uyumlu arayüz
 - **📚 Geçmiş Denemeler**: Paylaşılmış her vaka "Deneme - N" olarak açılır/kapanır bir listede kalıcı olarak saklanır; herkes istediği zaman geri dönüp cevapları/puanları/gerekçeleri tekrar görebilir
 - **✅ Kazanımlar / ❌ Hatalar**: Her değerlendirme artık sadece güçlü yönleri değil, puanın nereden/neden kırıldığını ve kişiye özel gelişim önerisini de ayrı ayrı gösterir
-- **🎓 Eğitimler**: Admin, katılımcılar için eğitim dosyası (~650 KB'a kadar PDF/Word/metin) yükleyebilir; herkes bu eğitimleri okuyabilir ve indirebilir
+- **🎓 Eğitimler**: Admin, katılımcılar için eğitim dosyası (~650 KB'a kadar PDF/Word/Excel/metin/resim) yükleyebilir. "Oku" butonu Word (.docx) ve Excel (.xlsx) dosyalarını da tarayıcı içinde okunabilir şekilde gösterir (indirmeye gerek kalmadan). Admin panelinde her eğitim için "kim okudu / kim okumadı" listesi görünür — kim indirdiği değil, kim "Oku"ya bastığı takip edilir
 
 ## 🧠 Nasıl Çalışır (Akış)
 
