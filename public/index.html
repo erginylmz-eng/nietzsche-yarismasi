@@ -961,7 +961,6 @@
                     <p style="margin-top:6px; color:#999; font-size:12px;">${t.fileName || ''}${t.fileSizeBytes ? ' (' + Math.round(t.fileSizeBytes / 1024) + ' KB)' : ''}</p>
                     <div style="margin-top:10px;">
                         <button onclick="openTraining('${t.id}')" style="background:#667eea;">👁️ Oku</button>
-                        <button onclick="downloadTraining('${t.id}')" style="background:#28a745;">⬇️ İndir</button>
                     </div>
                 </div>
             `;
@@ -1031,7 +1030,6 @@
                         <p style="margin-top:6px; color:#999; font-size:12px;">${t.fileName || ''}${t.fileSizeBytes ? ' (' + Math.round(t.fileSizeBytes / 1024) + ' KB)' : ''}</p>
                         <div style="margin-top:10px;">
                             <button onclick="openTraining('${t.id}')" style="background:#667eea;">👁️ Oku</button>
-                            <button onclick="downloadTraining('${t.id}')" style="background:#28a745;">⬇️ İndir</button>
                         </div>
                         <details style="margin-top:12px;">
                             <summary style="cursor:pointer; font-size:12px; color:#667eea; font-weight:bold;">
@@ -1166,14 +1164,12 @@
                     bodyEl.innerHTML = `<pre style="white-space:pre-wrap; font-family:inherit; font-size:14px; color:#333;">${text.replace(/</g, '&lt;')}</pre>`;
                 } else {
                     bodyEl.innerHTML = `
-                        <p style="color:#666; margin-bottom:12px;">Bu dosya türü tarayıcıda önizlenemiyor. Bilgisayarına indirip açabilirsin.</p>
-                        <button onclick="downloadTraining('${id}')" style="background:#28a745;">⬇️ İndir</button>
+                        <p style="color:#666;">Bu dosya türü tarayıcıda önizlenemiyor (desteklenen türler: Word, Excel, PDF, resim, metin).</p>
                     `;
                 }
             } catch (err) {
                 bodyEl.innerHTML = `
-                    <p style="color:#c00; font-size:13px; margin-bottom:12px;">Önizleme yüklenemedi: ${err.message}</p>
-                    <button onclick="downloadTraining('${id}')" style="background:#28a745;">⬇️ İndir</button>
+                    <p style="color:#c00; font-size:13px;">Önizleme yüklenemedi: ${err.message}</p>
                 `;
                 addDebugLog("✗ eğitim önizleme hatası: " + err.message);
             }
@@ -1182,19 +1178,6 @@
         function closeTrainingPreview() {
             const modal = document.getElementById('trainingPreviewModal');
             if (modal) modal.style.display = 'none';
-        }
-
-        function downloadTraining(id) {
-            const t = window._trainingsCache[id];
-            if (!t) return;
-            const url = URL.createObjectURL(base64ToBlob(t.fileDataBase64, t.fileType));
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = t.fileName || 'egitim';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-            URL.revokeObjectURL(url);
         }
 
         async function deleteTraining(id) {
