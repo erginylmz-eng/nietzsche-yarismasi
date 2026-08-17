@@ -16,6 +16,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 - **📚 Geçmiş Denemeler**: Paylaşılmış her vaka "Deneme - N" olarak açılır/kapanır bir listede kalıcı olarak saklanır; herkes istediği zaman geri dönüp cevapları/puanları/gerekçeleri tekrar görebilir
 - **✅ Kazanımlar / ❌ Hatalar**: Her değerlendirme artık sadece güçlü yönleri değil, puanın nereden/neden kırıldığını ve kişiye özel gelişim önerisini de ayrı ayrı gösterir
 - **🎓 Eğitimler**: Admin, katılımcılar için eğitim dosyası (~650 KB'a kadar PDF/Word/Excel/metin/resim) yükleyebilir. Sadece "Oku" ile görüntülenir — indirme butonu yok; Word (.docx) ve Excel (.xlsx) dosyaları da tarayıcı içinde okunabilir şekilde gösterilir. Admin panelinde her eğitim için "kim okudu / kim okumadı" listesi görünür
+- **⏱️ Eğitim Okuma Süresi Takibi**: "Oku"ya basıldığı an başlar, pencere kapatılınca (ya da sekme gizlenince) biter; okurken her 20 saniyede bir kısmi kayıt alınır, ani kapanmalarda en fazla ~20 saniyelik veri kaybı olur. Admin panelinde ayrı bir **"📊 Eğitim Katılım Raporu"** bölümünde her katılımcı × her eğitim için okundu/okunmadı ve toplam harcanan süre tek bir tabloda görünür
 
 ## 🧠 Nasıl Çalışır (Akış)
 
