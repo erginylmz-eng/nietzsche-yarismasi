@@ -924,6 +924,15 @@
             "ulusmustafa11@gmail.com"
         ];
 
+        // Çevrimiçi/çevrimdışı takibi (heartbeat): katılımcının sekmesi açıkken
+        // her HEARTBEAT_INTERVAL_MS'de bir "hâlâ buradayım" sinyali (lastSeenAt)
+        // yazılır. Admin panelinde biri, son sinyalinden ONLINE_THRESHOLD_MS'den
+        // daha az süre geçtiyse "Bağlı" sayılır — sekme kapanır/bağlantı koparsa
+        // yeni sinyal gelmeyeceği için kısa süre içinde otomatik olarak
+        // "Bağlı Değil" görünür hale gelir (elle "Çıkar"a gerek kalmadan).
+        const HEARTBEAT_INTERVAL_MS = 15000;
+        const ONLINE_THRESHOLD_MS = 40000;
+
         let firebaseAuth = null;
         let firebaseDB = null;
 
@@ -1694,10 +1703,54 @@
         // ==================== ADMIN PANEL ====================
         let participantsReady = false;
         let roundInProgress = false;
+        let adminParticipantsDocsCache = [];   // en son participants snapshot'ı (canlı süre hesabı için yeniden çizmede kullanılır)
 
         function updateStartButtonState() {
             const btn = document.getElementById('startButton');
             if (btn) btn.disabled = !participantsReady || roundInProgress;
+        }
+
+        // Bir katılımcının "şu an çevrimiçi" olup olmadığı, son heartbeat
+        // sinyalinin (lastSeenAt) ne kadar yakın zamanda geldiğine bakılarak
+        // CANLI olarak hesaplanır — statik bir alan olarak saklanmaz. Böylece
+        // sekmesini kapatan/bağlantısı kopan biri, elle "Çıkar"a gerek kalmadan
+        // kısa süre içinde otomatik olarak "Bağlı Değil" görünür.
+        function isParticipantOnline(data) {
+            if (!data || data.status !== 'connected') return false;
+            if (!data.lastSeenAt || typeof data.lastSeenAt.toMillis !== 'function') return false;
+            return (Date.now() - data.lastSeenAt.toMillis()) < ONLINE_THRESHOLD_MS;
+        }
+
+        function renderParticipantsList() {
+            const list = document.getElementById('participantsList');
+            if (!list) return;
+            list.innerHTML = '';
+            const docs = adminParticipantsDocsCache;
+            document.getElementById('participantCount').textContent = docs.length;
+            let allReady = docs.length > 0;
+
+            docs.forEach(doc => {
+                const data = doc.data();
+                const online = isParticipantOnline(data);
+                const card = document.createElement('div');
+                card.className = `participant-card ${online ? 'connected' : ''}`;
+                card.innerHTML = `
+                    <div class="clearfix">
+                        <h4 style="float:left;">${data.name || 'Katılımcı'}</h4>
+                        <button onclick="removeParticipant('${doc.id}', '${(data.name || data.email || '').replace(/'/g, "\\'")}')" style="float:right; background:#cb4d58; padding:4px 12px; font-size:11px; margin:0;">Çıkar</button>
+                    </div>
+                    <div style="clear:both;"></div>
+                    <p style="font-size: 12px; color: #999; margin: 8px 0 10px;">${data.email}</p>
+                    <span class="status-badge ${online ? 'online' : ''}">
+                        ${online ? '✓ Bağlı' : '✗ Bağlı Değil'}
+                    </span>
+                `;
+                list.appendChild(card);
+                if (!online) allReady = false;
+            });
+
+            participantsReady = allReady;
+            updateStartButtonState();
         }
 
         function setupAdminPanel(db, user) {
@@ -1709,35 +1762,11 @@
 
             db.collection('participants').onSnapshot(snapshot => {
                 addDebugLog("participants güncellendi: " + snapshot.size + " kayıt");
-                const list = document.getElementById('participantsList');
-                list.innerHTML = '';
                 // Admin bir katılımcı değildir; listeden ve sayımdan hariç tutulur
                 // (eski test verisi kalmışsa dahi burada güvenlik ağı sağlar).
                 const docs = snapshot.docs.filter(d => d.data().email !== ADMIN_EMAIL);
-                document.getElementById('participantCount').textContent = docs.length;
-                let allReady = docs.length > 0;
-
-                docs.forEach(doc => {
-                    const data = doc.data();
-                    const card = document.createElement('div');
-                    card.className = `participant-card ${data.status === 'connected' ? 'connected' : ''}`;
-                    card.innerHTML = `
-                        <div class="clearfix">
-                            <h4 style="float:left;">${data.name || 'Katılımcı'}</h4>
-                            <button onclick="removeParticipant('${doc.id}', '${(data.name || data.email || '').replace(/'/g, "\\'")}')" style="float:right; background:#cb4d58; padding:4px 12px; font-size:11px; margin:0;">Çıkar</button>
-                        </div>
-                        <div style="clear:both;"></div>
-                        <p style="font-size: 12px; color: #999; margin: 8px 0 10px;">${data.email}</p>
-                        <span class="status-badge ${data.status === 'connected' ? 'online' : ''}">
-                            ${data.status === 'connected' ? '✓ Bağlı' : '✗ Bağlı Değil'}
-                        </span>
-                    `;
-                    list.appendChild(card);
-                    if (data.status !== 'connected') allReady = false;
-                });
-
-                participantsReady = allReady;
-                updateStartButtonState();
+                adminParticipantsDocsCache = docs;
+                renderParticipantsList();
 
                 // Eğitim "kim okudu / kim okumadı" listesi için katılımcı
                 // kadrosunu güncel tut (bağlı olsun olmasın, tüm zamanlar).
@@ -1745,6 +1774,12 @@
                 renderAdminTrainingsList();
                 renderAdminTrainingReport();
             }, err => addDebugLog("✗ participants dinleme hatası: " + err.message));
+
+            // Firestore sadece VERİ değiştiğinde bildirim gönderir — ama "çevrimiçi"
+            // durumu zamanın geçmesiyle de değişir (biri sekmesini kapattıktan
+            // ONLINE_THRESHOLD_MS sonra, yeni bir yazma olmasa dahi çevrimdışı
+            // görünmeli). Bu yüzden listeyi düzenli aralıklarla yeniden çiziyoruz.
+            setInterval(renderParticipantsList, 5000);
 
             db.collection('responses').onSnapshot(snapshot => {
                 const list = document.getElementById('responsesList');
@@ -1923,10 +1958,26 @@
                 name: user.displayName || 'Katılımcı',
                 email: user.email,
                 status: 'connected',
-                connected_at: new Date()
+                connected_at: new Date(),
+                lastSeenAt: firebase.firestore.FieldValue.serverTimestamp()
             }, { merge: true }).then(() => {
                 addDebugLog("✓ participants/" + user.uid + " yazıldı (status: connected)");
             }).catch(err => addDebugLog("✗ participants yazma hatası: " + err.message));
+
+            // Çevrimiçi takibi: sekme açık olduğu sürece düzenli "hâlâ buradayım"
+            // sinyali gönderir (bkz. HEARTBEAT_INTERVAL_MS tanımı). Bu, admin
+            // panelindeki "Bağlı / Bağlı Değil" rozetinin gerçek zamanlı olmasını
+            // sağlar. setupParticipantScreen oturum başına sadece bir kez
+            // çalıştığından yeni bir interval her girişte tek sefer kurulur.
+            function sendHeartbeat() {
+                db.collection('participants').doc(user.uid).update({
+                    lastSeenAt: firebase.firestore.FieldValue.serverTimestamp()
+                }).catch(err => addDebugLog("✗ heartbeat yazma hatası: " + err.message));
+            }
+            setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+            document.addEventListener('visibilitychange', () => {
+                if (!document.hidden) sendHeartbeat();
+            });
 
             addDebugLog("session/current dinleniyor...");
             db.collection('session').doc('current').onSnapshot(async doc => {
