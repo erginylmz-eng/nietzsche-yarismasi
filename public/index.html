@@ -13,7 +13,7 @@
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #6175d1 0%, #8c6aaf 100%);
             min-height: 100vh;
             padding: 20px;
         }
@@ -23,14 +23,14 @@
             margin: 0 auto;
             background: white;
             border-radius: 15px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 20px 60px rgba(97, 117, 209, 0.25);
             padding: 40px;
         }
 
         .header {
             text-align: center;
             margin-bottom: 40px;
-            border-bottom: 3px solid #667eea;
+            border-bottom: 3px solid #6175d1;
             padding-bottom: 20px;
         }
 
@@ -65,7 +65,7 @@
         }
 
         .google-btn {
-            background: #4285f4;
+            background: #4d7ecb;
             color: white;
             border: none;
             padding: 12px 40px;
@@ -80,11 +80,11 @@
         }
 
         .google-btn:hover {
-            background: #357ae8;
+            background: #3f6bb3;
         }
 
         .google-btn:active {
-            background: #286da6;
+            background: #33578f;
         }
 
         /* ADMIN PANEL */
@@ -104,12 +104,12 @@
             background: #f8f9fa;
             padding: 20px;
             border-radius: 10px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #6175d1;
         }
 
         .participant-card.connected {
-            border-left-color: #4caf50;
-            background: #f1f8f4;
+            border-left-color: #3f8356;
+            background: #eaf6ee;
         }
 
         .participant-card h4 {
@@ -124,16 +124,16 @@
             font-size: 12px;
             font-weight: bold;
             color: white;
-            background: #f44336;
+            background: #cb4d58;
         }
 
         .status-badge.online {
-            background: #4caf50;
+            background: #3f8356;
         }
 
         /* BUTTONS */
         button {
-            background: #667eea;
+            background: #6175d1;
             color: white;
             border: none;
             padding: 12px 30px;
@@ -145,7 +145,7 @@
         }
 
         button:hover:not(:disabled) {
-            background: #764ba2;
+            background: #8c6aaf;
         }
 
         button:disabled {
@@ -154,19 +154,19 @@
         }
 
         .logout-btn {
-            background: #f44336;
-            float: right;
+            background: #cb4d58;
+            margin: 0;
         }
 
         .logout-btn:hover {
-            background: #da190b;
+            background: #b23e48;
         }
 
         /* PARTICIPANT SCREEN */
         .waiting-message {
-            background: #fff3cd;
-            border: 2px solid #ffc107;
-            color: #856404;
+            background: #fdf3e0;
+            border: 2px solid #d9a441;
+            color: #8a6d1f;
             padding: 20px;
             border-radius: 8px;
             text-align: center;
@@ -178,7 +178,7 @@
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 30px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #6175d1;
         }
 
         .case-container h3 {
@@ -196,7 +196,7 @@
         }
 
         .timer {
-            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            background: linear-gradient(135deg, #cb4da1 0%, #d1475a 100%);
             color: white;
             padding: 20px;
             border-radius: 10px;
@@ -229,7 +229,7 @@
 
         textarea:focus {
             outline: none;
-            border-color: #667eea;
+            border-color: #6175d1;
         }
 
         .char-count {
@@ -240,16 +240,16 @@
 
         .submit-btn {
             width: 100%;
-            background: #667eea;
+            background: #6175d1;
             padding: 15px;
             font-size: 16px;
         }
 
         .submitted-message {
             display: none;
-            background: #d4edda;
-            border: 2px solid #28a745;
-            color: #155724;
+            background: #eaf6ee;
+            border: 2px solid #3f8356;
+            color: #2c6e46;
             padding: 20px;
             border-radius: 8px;
             text-align: center;
@@ -268,23 +268,25 @@
             color: #666;
         }
 
-        .clearfix::after {
-            content: "";
-            clear: both;
-            display: table;
+        .clearfix {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .result-card {
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 12px;
-            border-left: 4px solid #667eea;
+            border-left: 4px solid #6175d1;
             background: #f8f9fa;
         }
 
         .result-card.winner {
-            border-left-color: #ffc107;
-            background: #fff8e1;
+            border-left-color: #d9a441;
+            background: #fdf3e0;
         }
 
         .result-card .score {
@@ -294,7 +296,7 @@
 
         #debugPanel {
             background: #222;
-            color: #0f0;
+            color: #8fdbb0;
             padding: 10px 15px;
             border-radius: 5px;
             font-size: 11px;
@@ -321,7 +323,7 @@
         }
 
         .collapsible-summary:hover {
-            color: #667eea;
+            color: #6175d1;
         }
 
         .collapsible-body {
@@ -329,7 +331,7 @@
         }
 
         .subsection-title {
-            color: #667eea;
+            color: #6175d1;
             font-size: 15px;
             margin: 20px 0 12px;
             padding-bottom: 6px;
@@ -356,7 +358,7 @@
         }
 
         .history-item-summary:hover {
-            color: #667eea;
+            color: #6175d1;
         }
 
         .history-item-body {
@@ -367,25 +369,25 @@
         .gains-box {
             margin-top: 10px;
             padding: 10px 12px;
-            background: #eafaf0;
+            background: #eaf6ee;
             border-radius: 6px;
-            border-left: 3px solid #28a745;
+            border-left: 3px solid #3f8356;
         }
 
         .gains-box strong {
-            color: #1e7e34;
+            color: #2c6e46;
         }
 
         .mistakes-box {
             margin-top: 8px;
             padding: 10px 12px;
-            background: #fdeeee;
+            background: #fdeef0;
             border-radius: 6px;
-            border-left: 3px solid #dc3545;
+            border-left: 3px solid #cb4d58;
         }
 
         .mistakes-box strong {
-            color: #a71d2a;
+            color: #a54552;
         }
 
         /* EĞİTİMLER */
@@ -394,7 +396,7 @@
             padding: 15px;
             border-radius: 8px;
             margin-bottom: 12px;
-            border-left: 4px solid #764ba2;
+            border-left: 4px solid #8c6aaf;
         }
 
         .training-upload-form textarea {
@@ -435,7 +437,7 @@
             position: absolute;
             top: 15px;
             right: 15px;
-            background: #f44336;
+            background: #cb4d58;
             padding: 8px 16px;
             margin: 0;
         }
@@ -476,6 +478,116 @@
             border: 1px solid #ddd;
             padding: 6px 10px;
         }
+
+        /* ==================== MOBİL UYUMLULUK ==================== */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .container {
+                padding: 20px 16px;
+                border-radius: 12px;
+            }
+
+            .header {
+                margin-bottom: 24px;
+                padding-bottom: 14px;
+            }
+
+            .header h1 {
+                font-size: 20px;
+                line-height: 1.3;
+            }
+
+            .header p {
+                font-size: 12.5px;
+            }
+
+            .clearfix h2 {
+                font-size: 19px;
+            }
+
+            .login-screen {
+                padding: 36px 12px;
+            }
+
+            .case-container {
+                padding: 14px;
+            }
+
+            .timer {
+                font-size: 32px;
+                padding: 14px;
+            }
+
+            .participants-grid {
+                grid-template-columns: 1fr;
+            }
+
+            textarea {
+                height: 180px;
+                font-size: 13px;
+            }
+
+            #startButton {
+                width: 100%;
+                padding: 14px 16px !important;
+                font-size: 14px !important;
+            }
+
+            button {
+                padding: 11px 18px;
+                font-size: 13px;
+            }
+
+            .submit-btn {
+                font-size: 15px;
+            }
+
+            #trainingPreviewModal {
+                padding: 14px 8px;
+            }
+
+            .training-preview-box {
+                padding: 18px 14px;
+                border-radius: 10px;
+            }
+
+            #trainingPreviewTitle {
+                padding-right: 70px;
+                font-size: 17px;
+            }
+
+            .training-preview-close {
+                padding: 7px 12px;
+                font-size: 13px;
+            }
+
+            #debugPanel {
+                font-size: 10px;
+                max-height: 110px;
+            }
+        }
+
+        @media (max-width: 420px) {
+            .header h1 {
+                font-size: 18px;
+            }
+
+            .timer {
+                font-size: 26px;
+            }
+
+            .clearfix h2 {
+                font-size: 17px;
+            }
+
+            .logout-btn {
+                padding: 9px 16px;
+                font-size: 12.5px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -498,10 +610,9 @@
         <!-- ADMIN PANEL -->
         <div class="admin-panel screen">
             <div class="clearfix">
-                <h2 style="float: left;">Yönetici Paneli</h2>
+                <h2>Yönetici Paneli</h2>
                 <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
             </div>
-            <div style="clear: both;"></div>
 
             <div class="user-info" id="adminUserInfo"></div>
 
@@ -530,7 +641,7 @@
                         <div id="adminCurrentAttempt">
                             <p id="adminCurrentAttemptStatus" style="color: #666; font-size: 13px; margin-bottom: 15px;">Henüz bir vaka başlatılmadı.</p>
 
-                            <p id="adminCurrentAttemptFinishedMsg" style="display: none; color: #28a745; font-weight: bold; font-size: 14px; margin-bottom: 15px;"></p>
+                            <p id="adminCurrentAttemptFinishedMsg" style="display: none; color: #3f8356; font-weight: bold; font-size: 14px; margin-bottom: 15px;"></p>
 
                             <div id="adminCurrentAttemptLive">
                                 <div id="adminCaseBox" style="display: none;">
@@ -547,7 +658,7 @@
                                         Sonuçları incele. Hazır olduğunda aşağıdaki butona basarsan tüm cevaplar, puanlar ve gerekçeler
                                         tüm katılımcılara aynı anda açılır.
                                     </p>
-                                    <button id="publishResultsBtn" onclick="publishResults()" style="display: none; background: #28a745;">
+                                    <button id="publishResultsBtn" onclick="publishResults()" style="display: none; background: #3f8356;">
                                         📢 Sonuçları Katılımcılara Paylaş
                                     </button>
                                     <div id="adminResultsContainer"></div>
@@ -604,10 +715,9 @@
         <!-- PARTICIPANT SCREEN -->
         <div class="participant-screen screen">
             <div class="clearfix">
-                <h2 style="float: left;">Yarışma Alanı</h2>
+                <h2>Yarışma Alanı</h2>
                 <button class="logout-btn" onclick="logout()">Çıkış Yap</button>
             </div>
-            <div style="clear: both;"></div>
 
             <div class="user-info" id="participantUserInfo"></div>
 
@@ -844,7 +954,7 @@
                         <strong>${i === 0 ? '🏆 ' : ''}${e.participant_name || ''} (${e.participant_email || ''})</strong>
                         <span class="score">${e.evaluation?.total_score ?? 0} / 100</span>
                     </div>
-                    ${i === 0 ? '<p style="color:#b8860b; font-weight:bold; margin-top:8px;">🏆 Bu vakanın kazananı — 20.000 TL</p>' : ''}
+                    ${i === 0 ? '<p style="color:#a9822e; font-weight:bold; margin-top:8px;">🏆 Bu vakanın kazananı — 20.000 TL</p>' : ''}
                     <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Cevap:</strong></p>
                     <p style="margin-top:2px; color:#333; font-size:13px; white-space:pre-wrap; background:#fff; padding:8px; border-radius:6px;">${(e.answer || '').replace(/</g, '&lt;')}</p>
                     <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Nietzsche uygunluğu:</strong> ${e.evaluation?.criteria?.nietzsche_alignment ?? '-'} / 25 &nbsp;|&nbsp; <strong>Temel düşünceler:</strong> ${e.evaluation?.criteria?.fundamental_thoughts ?? '-'} / 25 &nbsp;|&nbsp; <strong>Mantıksal tutarlılık:</strong> ${e.evaluation?.criteria?.logical_consistency ?? '-'} / 25 &nbsp;|&nbsp; <strong>Kurumsal uygulanabilirlik:</strong> ${e.evaluation?.criteria?.institutional_applicability ?? '-'} / 25</p>
@@ -953,7 +1063,7 @@
                     ${buildResultCardsHTML(evals)}
                 `;
             } catch (err) {
-                bodyEl.innerHTML = '<p style="color:#c00; font-size:13px;">Sonuçlar yüklenemedi: ' + err.message + '</p>';
+                bodyEl.innerHTML = '<p style="color:#a54552; font-size:13px;">Sonuçlar yüklenemedi: ' + err.message + '</p>';
                 bodyEl.dataset.loaded = '';
                 addDebugLog("✗ geçmiş deneme detay hatası (#" + caseNumber + "): " + err.message);
             }
@@ -970,12 +1080,12 @@
                 <div class="training-card">
                     <div class="clearfix">
                         <strong>${t.title || 'İsimsiz Eğitim'}</strong>
-                        ${isAdmin ? `<button onclick="deleteTraining('${t.id}')" style="float:right; background:#f44336; padding:6px 14px; font-size:12px;">Sil</button>` : ''}
+                        ${isAdmin ? `<button onclick="deleteTraining('${t.id}')" style="float:right; background:#cb4d58; padding:6px 14px; font-size:12px;">Sil</button>` : ''}
                     </div>
                     ${t.description ? `<p style="margin-top:6px; color:#666; font-size:13px;">${t.description}</p>` : ''}
                     <p style="margin-top:6px; color:#999; font-size:12px;">${t.fileName || ''}${t.fileSizeBytes ? ' (' + Math.round(t.fileSizeBytes / 1024) + ' KB)' : ''}</p>
                     <div style="margin-top:10px;">
-                        <button onclick="openTraining('${t.id}')" style="background:#667eea;">👁️ Oku</button>
+                        <button onclick="openTraining('${t.id}')" style="background:#6175d1;">👁️ Oku</button>
                     </div>
                 </div>
             `;
@@ -1030,25 +1140,25 @@
                 const notRead = adminParticipantsRosterCache.filter(p => !readerUids.has(p.uid));
 
                 const readListHtml = readers.length > 0
-                    ? readers.map(r => `<div style="color:#1e7e34; font-size:12px; margin-bottom:3px;">✓ ${r.name || r.email} — ${formatDuration(r.totalDurationMs)}</div>`).join('')
+                    ? readers.map(r => `<div style="color:#2c6e46; font-size:12px; margin-bottom:3px;">✓ ${r.name || r.email} — ${formatDuration(r.totalDurationMs)}</div>`).join('')
                     : '<div style="color:#999; font-size:12px;">Henüz kimse okumadı.</div>';
                 const notReadListHtml = notRead.length > 0
-                    ? notRead.map(p => `<div style="color:#a71d2a; font-size:12px; margin-bottom:3px;">✗ ${p.name || p.email}</div>`).join('')
+                    ? notRead.map(p => `<div style="color:#a54552; font-size:12px; margin-bottom:3px;">✗ ${p.name || p.email}</div>`).join('')
                     : '<div style="color:#999; font-size:12px;">Herkes okudu.</div>';
 
                 return `
                     <div class="training-card">
                         <div class="clearfix">
                             <strong>${t.title || 'İsimsiz Eğitim'}</strong>
-                            <button onclick="deleteTraining('${t.id}')" style="float:right; background:#f44336; padding:6px 14px; font-size:12px;">Sil</button>
+                            <button onclick="deleteTraining('${t.id}')" style="float:right; background:#cb4d58; padding:6px 14px; font-size:12px;">Sil</button>
                         </div>
                         ${t.description ? `<p style="margin-top:6px; color:#666; font-size:13px;">${t.description}</p>` : ''}
                         <p style="margin-top:6px; color:#999; font-size:12px;">${t.fileName || ''}${t.fileSizeBytes ? ' (' + Math.round(t.fileSizeBytes / 1024) + ' KB)' : ''}</p>
                         <div style="margin-top:10px;">
-                            <button onclick="openTraining('${t.id}')" style="background:#667eea;">👁️ Oku</button>
+                            <button onclick="openTraining('${t.id}')" style="background:#6175d1;">👁️ Oku</button>
                         </div>
                         <details style="margin-top:12px;">
-                            <summary style="cursor:pointer; font-size:12px; color:#667eea; font-weight:bold;">
+                            <summary style="cursor:pointer; font-size:12px; color:#6175d1; font-weight:bold;">
                                 📊 Okuma durumu: ${readers.length} / ${totalParticipants} katılımcı okudu
                             </summary>
                             <div style="margin-top:10px; display:grid; grid-template-columns:1fr 1fr; gap:10px;">
@@ -1077,7 +1187,7 @@
             }
 
             const headerCols = adminTrainingsListCache.map(t =>
-                `<th style="padding:10px; border-bottom:2px solid #eee; text-align:left; font-size:12px; color:#667eea; white-space:nowrap;">${t.title || 'İsimsiz'}</th>`
+                `<th style="padding:10px; border-bottom:2px solid #eee; text-align:left; font-size:12px; color:#6175d1; white-space:nowrap;">${t.title || 'İsimsiz'}</th>`
             ).join('');
 
             const rows = adminParticipantsRosterCache.map(p => {
@@ -1087,9 +1197,9 @@
                     const rec = readers.find(r => r.uid === p.uid);
                     if (rec && rec.totalDurationMs > 0) {
                         totalMs += rec.totalDurationMs;
-                        return `<td style="padding:10px; border-bottom:1px solid #f0f0f0; font-size:12px; color:#1e7e34; white-space:nowrap;">✓ ${formatDuration(rec.totalDurationMs)}</td>`;
+                        return `<td style="padding:10px; border-bottom:1px solid #f0f0f0; font-size:12px; color:#2c6e46; white-space:nowrap;">✓ ${formatDuration(rec.totalDurationMs)}</td>`;
                     }
-                    return `<td style="padding:10px; border-bottom:1px solid #f0f0f0; font-size:12px; color:#a71d2a;">✗</td>`;
+                    return `<td style="padding:10px; border-bottom:1px solid #f0f0f0; font-size:12px; color:#a54552;">✗</td>`;
                 }).join('');
                 return `
                     <tr>
@@ -1332,7 +1442,7 @@
                 }
             } catch (err) {
                 bodyEl.innerHTML = `
-                    <p style="color:#c00; font-size:13px;">Önizleme yüklenemedi: ${err.message}</p>
+                    <p style="color:#a54552; font-size:13px;">Önizleme yüklenemedi: ${err.message}</p>
                 `;
                 addDebugLog("✗ eğitim önizleme hatası: " + err.message);
             }
@@ -1476,7 +1586,7 @@
                     card.innerHTML = `
                         <div class="clearfix">
                             <h4 style="float:left;">${data.name || 'Katılımcı'}</h4>
-                            <button onclick="removeParticipant('${doc.id}', '${(data.name || data.email || '').replace(/'/g, "\\'")}')" style="float:right; background:#f44336; padding:4px 12px; font-size:11px; margin:0;">Çıkar</button>
+                            <button onclick="removeParticipant('${doc.id}', '${(data.name || data.email || '').replace(/'/g, "\\'")}')" style="float:right; background:#cb4d58; padding:4px 12px; font-size:11px; margin:0;">Çıkar</button>
                         </div>
                         <div style="clear:both;"></div>
                         <p style="font-size: 12px; color: #999; margin: 8px 0 10px;">${data.email}</p>
@@ -1514,7 +1624,7 @@
 
                 responses.forEach(data => {
                     const card = document.createElement('div');
-                    card.style.cssText = 'background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #667eea;';
+                    card.style.cssText = 'background: #f8f9fa; padding: 15px; border-radius: 8px; margin-bottom: 12px; border-left: 4px solid #6175d1;';
                     card.innerHTML = `
                         <strong>Vaka #${data.case_number || '?'} — ${data.participant_name || ''} (${data.participant_email || 'Bilinmiyor'})</strong>
                         <p style="margin-top: 8px; color: #555; line-height: 1.5; white-space: pre-wrap;">${data.answer || ''}</p>
