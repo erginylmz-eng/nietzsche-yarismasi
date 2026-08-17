@@ -1064,8 +1064,12 @@
                     const card = document.createElement('div');
                     card.className = `participant-card ${data.status === 'connected' ? 'connected' : ''}`;
                     card.innerHTML = `
-                        <h4>${data.name || 'Katılımcı'}</h4>
-                        <p style="font-size: 12px; color: #999; margin-bottom: 10px;">${data.email}</p>
+                        <div class="clearfix">
+                            <h4 style="float:left;">${data.name || 'Katılımcı'}</h4>
+                            <button onclick="removeParticipant('${doc.id}', '${(data.name || data.email || '').replace(/'/g, "\\'")}')" style="float:right; background:#f44336; padding:4px 12px; font-size:11px; margin:0;">Çıkar</button>
+                        </div>
+                        <div style="clear:both;"></div>
+                        <p style="font-size: 12px; color: #999; margin: 8px 0 10px;">${data.email}</p>
                         <span class="status-badge ${data.status === 'connected' ? 'online' : ''}">
                             ${data.status === 'connected' ? '✓ Bağlı' : '✗ Bağlı Değil'}
                         </span>
@@ -1215,6 +1219,21 @@
                     btn.disabled = false;
                     btn.textContent = '📢 Sonuçları Katılımcılara Paylaş';
                 }
+            }
+        }
+
+        // Admin bir katılımcıyı bağlı listesinden çıkarır — böylece o kişi
+        // "toplam katılımcı" sayısına dahil edilmez ve tur onu beklemez.
+        // (Kişi sayfayı yenilerse ya da tekrar giriş yaparsa otomatik olarak
+        // tekrar bağlı katılımcı listesine eklenir — bu kalıcı bir yasaklama değildir.)
+        async function removeParticipant(uid, displayName) {
+            if (!confirm(`"${displayName}" adlı katılımcıyı bağlı listesinden çıkarmak istediğine emin misin?`)) return;
+            try {
+                await firebaseDB.collection('participants').doc(uid).delete();
+                addDebugLog("✓ Katılımcı çıkarıldı: " + displayName + " (" + uid + ")");
+            } catch (err) {
+                addDebugLog("✗ Katılımcı çıkarma hatası: " + err.message);
+                alert('Çıkarılamadı: ' + err.message);
             }
         }
 
