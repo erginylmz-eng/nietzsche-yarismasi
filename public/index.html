@@ -465,11 +465,23 @@
                 firebaseDB = firebase.firestore();
 
                 addDebugLog("✓ Firebase initialized");
-                addDebugLog("✓ Ready to sign in");
 
-                const btn = document.getElementById('googleSignInBtn');
-                btn.disabled = false;
-                btn.innerHTML = '<span>🔐</span><span>Google ile Giriş Yap</span>';
+                // Firebase, oturumu tarayıcıda kalıcı olarak saklar. Sayfa her
+                // yenilendiğinde onAuthStateChanged önce mevcut oturumu kontrol eder;
+                // varsa otomatik olarak ilgili ekrana geçilir, tekrar Google ile
+                // giriş yapmaya gerek kalmaz.
+                firebaseAuth.onAuthStateChanged(user => {
+                    if (user) {
+                        addDebugLog("✓ Kayıtlı oturum bulundu: " + user.email);
+                        setupSession(user);
+                    } else {
+                        addDebugLog("Oturum yok, giriş bekleniyor");
+                        const btn = document.getElementById('googleSignInBtn');
+                        btn.disabled = false;
+                        btn.innerHTML = '<span>🔐</span><span>Google ile Giriş Yap</span>';
+                        showScreen('login');
+                    }
+                });
             } catch (err) {
                 addDebugLog("✗ Firebase error: " + err.message);
             }
@@ -507,13 +519,14 @@
                 const provider = new firebase.auth.GoogleAuthProvider();
                 const result = await firebaseAuth.signInWithPopup(provider);
                 addDebugLog("✓ Google login başarılı: " + result.user.email);
-
-                const user = result.user;
                 // NOT: participants koleksiyonuna yazma işlemi burada YAPILMAZ.
                 // Admin bir katılımcı değildir; bu yazma sadece setupParticipantScreen()
                 // içinde, gerçek katılımcılar için yapılır (aksi halde admin de
                 // "bağlı katılımcı" sayılıp sayımları bozuyordu).
-                setupSession(user);
+                // setupSession() burada da ÇAĞRILMAZ — yukarıdaki onAuthStateChanged
+                // dinleyicisi bu girişi otomatik yakalayıp ekranı kuracak. Böylece
+                // hem "yeni giriş" hem de "sayfa yenilemesinde eski oturum" aynı,
+                // tek koddan geçer ve ekranlar/dinleyiciler iki kez kurulmaz.
             } catch (error) {
                 addDebugLog("✗ Giriş hatası: " + error.code + " - " + error.message);
                 alert("Giriş başarısız: " + error.message);
