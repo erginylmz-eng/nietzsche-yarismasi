@@ -310,6 +310,106 @@
             font-weight: bold;
             margin-bottom: 4px;
         }
+
+        /* COLLAPSIBLE SECTIONS (Denemeler / Eğitimler) */
+        .collapsible-summary {
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 18px;
+            color: #333;
+            padding: 4px 0;
+        }
+
+        .collapsible-summary:hover {
+            color: #667eea;
+        }
+
+        .collapsible-body {
+            padding-top: 15px;
+        }
+
+        .subsection-title {
+            color: #667eea;
+            font-size: 15px;
+            margin: 20px 0 12px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #eee;
+        }
+
+        .subsection-title:first-child {
+            margin-top: 0;
+        }
+
+        /* GEÇMİŞ DENEMELER */
+        .history-item {
+            background: #fff;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            padding: 12px 16px;
+        }
+
+        .history-item-summary {
+            cursor: pointer;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .history-item-summary:hover {
+            color: #667eea;
+        }
+
+        .history-item-body {
+            margin-top: 14px;
+        }
+
+        /* SONUÇ KARTI: KAZANIMLAR / HATALAR */
+        .gains-box {
+            margin-top: 10px;
+            padding: 10px 12px;
+            background: #eafaf0;
+            border-radius: 6px;
+            border-left: 3px solid #28a745;
+        }
+
+        .gains-box strong {
+            color: #1e7e34;
+        }
+
+        .mistakes-box {
+            margin-top: 8px;
+            padding: 10px 12px;
+            background: #fdeeee;
+            border-radius: 6px;
+            border-left: 3px solid #dc3545;
+        }
+
+        .mistakes-box strong {
+            color: #a71d2a;
+        }
+
+        /* EĞİTİMLER */
+        .training-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid #764ba2;
+        }
+
+        .training-upload-form textarea {
+            height: 70px;
+        }
+
+        .training-upload-form input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
@@ -356,26 +456,63 @@
                 <div class="participants-grid" id="participantsList"></div>
             </div>
 
-            <div class="case-container" id="adminCaseBox" style="display: none;">
-                <h3>Aktif Vaka</h3>
-                <div class="case-text" id="adminCaseContent"></div>
+            <div class="case-container">
+                <details class="collapsible">
+                    <summary class="collapsible-summary">📚 Denemeler</summary>
+                    <div class="collapsible-body">
+                        <h4 class="subsection-title">🕐 Mevcut Deneme</h4>
+                        <div id="adminCurrentAttempt">
+                            <p id="adminCurrentAttemptStatus" style="color: #666; font-size: 13px; margin-bottom: 15px;">Henüz bir vaka başlatılmadı.</p>
+
+                            <div id="adminCaseBox" style="display: none;">
+                                <h4 style="color:#333; margin-bottom:10px;">Aktif Vaka</h4>
+                                <div class="case-text" id="adminCaseContent"></div>
+                            </div>
+
+                            <h4 style="color:#333; margin: 20px 0 10px;">Gelen Cevaplar (<span id="responseCount">0</span>)</h4>
+                            <div id="responsesList"></div>
+
+                            <div id="adminResultsBox" style="display: none; margin-top: 20px;">
+                                <h4 style="color:#333; margin-bottom:10px;">🏆 Değerlendirme Sonuçları (şu an sadece sana görünüyor)</h4>
+                                <p style="margin-bottom: 10px; color: #666; font-size: 13px;">
+                                    Sonuçları incele. Hazır olduğunda aşağıdaki butona basarsan tüm cevaplar, puanlar ve gerekçeler
+                                    tüm katılımcılara aynı anda açılır.
+                                </p>
+                                <button id="publishResultsBtn" onclick="publishResults()" style="display: none; background: #28a745;">
+                                    📢 Sonuçları Katılımcılara Paylaş
+                                </button>
+                                <div id="adminResultsContainer"></div>
+                            </div>
+                        </div>
+
+                        <h4 class="subsection-title">📜 Geçmiş Denemeler</h4>
+                        <div id="adminHistoryList">
+                            <p style="color: #999; font-size: 13px;">Henüz tamamlanmış / paylaşılmış bir deneme yok.</p>
+                        </div>
+                    </div>
+                </details>
             </div>
 
             <div class="case-container">
-                <h3>Gelen Cevaplar (<span id="responseCount">0</span>)</h3>
-                <div id="responsesList"></div>
-            </div>
-
-            <div class="case-container" id="adminResultsBox" style="display: none;">
-                <h3>🏆 Değerlendirme Sonuçları (şu an sadece sana görünüyor)</h3>
-                <p style="margin-bottom: 10px; color: #666; font-size: 13px;">
-                    Sonuçları incele. Hazır olduğunda aşağıdaki butona basarsan tüm cevaplar, puanlar ve gerekçeler
-                    tüm katılımcılara aynı anda açılır.
-                </p>
-                <button id="publishResultsBtn" onclick="publishResults()" style="display: none; background: #28a745;">
-                    📢 Sonuçları Katılımcılara Paylaş
-                </button>
-                <div id="adminResultsContainer"></div>
+                <details class="collapsible">
+                    <summary class="collapsible-summary">🎓 Eğitimler</summary>
+                    <div class="collapsible-body">
+                        <div class="training-upload-form">
+                            <h4 class="subsection-title" style="margin-top:0;">Yeni Eğitim Yükle</h4>
+                            <input type="text" id="trainingTitleInput" placeholder="Başlık">
+                            <textarea id="trainingDescInput" placeholder="Açıklama (opsiyonel)"></textarea>
+                            <input type="file" id="trainingFileInput" style="margin: 10px 0;">
+                            <p style="font-size: 12px; color: #999; margin-bottom: 10px;">
+                                Maks. dosya boyutu ~650 KB (PDF, Word, metin gibi kısa eğitim dosyaları için uygundur).
+                            </p>
+                            <button id="trainingUploadBtn" onclick="uploadTraining()">📤 Yükle</button>
+                        </div>
+                        <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;">
+                        <div id="adminTrainingsList">
+                            <p style="color: #999; font-size: 13px;">Yükleniyor...</p>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
 
@@ -416,6 +553,32 @@
                     <h3>🏆 Değerlendirme Sonuçları</h3>
                     <div id="participantResultsContainer"></div>
                 </div>
+            </div>
+
+            <div class="case-container">
+                <details class="collapsible">
+                    <summary class="collapsible-summary">📚 Denemeler</summary>
+                    <div class="collapsible-body">
+                        <h4 class="subsection-title">🕐 Mevcut Deneme</h4>
+                        <p id="participantCurrentAttemptSummary" style="color: #666; font-size: 13px; margin-bottom: 10px;">Şu an aktif bir deneme yok.</p>
+
+                        <h4 class="subsection-title">📜 Geçmiş Denemeler</h4>
+                        <div id="participantHistoryList">
+                            <p style="color: #999; font-size: 13px;">Henüz tamamlanmış / paylaşılmış bir deneme yok.</p>
+                        </div>
+                    </div>
+                </details>
+            </div>
+
+            <div class="case-container">
+                <details class="collapsible">
+                    <summary class="collapsible-summary">🎓 Eğitimler</summary>
+                    <div class="collapsible-body">
+                        <div id="participantTrainingsList">
+                            <p style="color: #999; font-size: 13px;">Yükleniyor...</p>
+                        </div>
+                    </div>
+                </details>
             </div>
         </div>
     </div>
@@ -579,6 +742,37 @@
         // (aynı anahtarla tekrar çağrılırsa öncekini kapatır, dinleyici sızıntısını önler)
         const activeListeners = {};
 
+        // Bir vakanın tüm katılımcı sonuçlarını (cevap + puan + kazanım/hata) HTML'e çevirir.
+        // Hem canlı sonuç kutusunda (watchResults) hem de Geçmiş Denemeler detayında kullanılır.
+        function buildResultCardsHTML(evals) {
+            if (!evals || evals.length === 0) {
+                return '<p style="color:#999; font-size:13px;">Bu deneme için henüz sonuç yok.</p>';
+            }
+            const sorted = [...evals].sort((a, b) => (b.evaluation?.total_score || 0) - (a.evaluation?.total_score || 0));
+            return sorted.map((e, i) => `
+                <div class="result-card ${i === 0 ? 'winner' : ''}">
+                    <div class="clearfix">
+                        <strong>${i === 0 ? '🏆 ' : ''}${e.participant_name || ''} (${e.participant_email || ''})</strong>
+                        <span class="score">${e.evaluation?.total_score ?? 0} / 100</span>
+                    </div>
+                    ${i === 0 ? '<p style="color:#b8860b; font-weight:bold; margin-top:8px;">🏆 Bu vakanın kazananı — 20.000 TL</p>' : ''}
+                    <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Cevap:</strong></p>
+                    <p style="margin-top:2px; color:#333; font-size:13px; white-space:pre-wrap; background:#fff; padding:8px; border-radius:6px;">${(e.answer || '').replace(/</g, '&lt;')}</p>
+                    <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Nietzsche uygunluğu:</strong> ${e.evaluation?.criteria?.nietzsche_alignment ?? '-'} / 25 &nbsp;|&nbsp; <strong>Temel düşünceler:</strong> ${e.evaluation?.criteria?.fundamental_thoughts ?? '-'} / 25 &nbsp;|&nbsp; <strong>Mantıksal tutarlılık:</strong> ${e.evaluation?.criteria?.logical_consistency ?? '-'} / 25 &nbsp;|&nbsp; <strong>Kurumsal uygulanabilirlik:</strong> ${e.evaluation?.criteria?.institutional_applicability ?? '-'} / 25</p>
+                    <div class="gains-box">
+                        <strong>✅ Kazanımlar</strong>
+                        <p style="margin-top:4px; color:#333; font-size:13px;">${e.evaluation?.strengths || '-'}</p>
+                    </div>
+                    <div class="mistakes-box">
+                        <strong>❌ Hatalar</strong>
+                        <p style="margin-top:4px; color:#333; font-size:13px;"><strong>Puan kaybı:</strong> ${e.evaluation?.weaknesses || '-'}</p>
+                        <p style="margin-top:6px; color:#333; font-size:13px;"><strong>Gelişim önerisi:</strong> ${e.evaluation?.improvement_advice || '-'}</p>
+                    </div>
+                    <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Genel değerlendirme:</strong> ${e.evaluation?.general_evaluation || '-'}</p>
+                </div>
+            `).join('');
+        }
+
         function watchResults(caseNumber, key, containerId, boxId, db) {
             const listenerKey = 'results_' + key;
             if (activeListeners[listenerKey]) {
@@ -600,24 +794,212 @@
 
                     const evals = [];
                     snapshot.forEach(d => evals.push(d.data()));
-                    evals.sort((a, b) => (b.evaluation?.total_score || 0) - (a.evaluation?.total_score || 0));
-
-                    container.innerHTML = evals.map((e, i) => `
-                        <div class="result-card ${i === 0 ? 'winner' : ''}">
-                            <div class="clearfix">
-                                <strong>${i === 0 ? '🏆 ' : ''}${e.participant_name || ''} (${e.participant_email || ''})</strong>
-                                <span class="score">${e.evaluation?.total_score ?? 0} / 100</span>
-                            </div>
-                            ${i === 0 ? '<p style="color:#b8860b; font-weight:bold; margin-top:8px;">🏆 Bu vakanın kazananı — 20.000 TL</p>' : ''}
-                            <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Cevap:</strong></p>
-                            <p style="margin-top:2px; color:#333; font-size:13px; white-space:pre-wrap; background:#fff; padding:8px; border-radius:6px;">${(e.answer || '').replace(/</g, '&lt;')}</p>
-                            <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Nietzsche uygunluğu:</strong> ${e.evaluation?.criteria?.nietzsche_alignment ?? '-'} / 25 &nbsp;|&nbsp; <strong>Temel düşünceler:</strong> ${e.evaluation?.criteria?.fundamental_thoughts ?? '-'} / 25 &nbsp;|&nbsp; <strong>Mantıksal tutarlılık:</strong> ${e.evaluation?.criteria?.logical_consistency ?? '-'} / 25 &nbsp;|&nbsp; <strong>Kurumsal uygulanabilirlik:</strong> ${e.evaluation?.criteria?.institutional_applicability ?? '-'} / 25</p>
-                            <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Güçlü yönler:</strong> ${e.evaluation?.strengths || '-'}</p>
-                            <p style="margin-top:4px; color:#555; font-size:13px;"><strong>Eksiklikler:</strong> ${e.evaluation?.weaknesses || '-'}</p>
-                            <p style="margin-top:4px; color:#555; font-size:13px;"><strong>Genel değerlendirme:</strong> ${e.evaluation?.general_evaluation || '-'}</p>
-                        </div>
-                    `).join('');
+                    container.innerHTML = buildResultCardsHTML(evals);
                 }, err => addDebugLog("✗ evaluations dinleme hatası (" + key + "): " + err.message));
+        }
+
+        // ==================== GEÇMİŞ DENEMELER ====================
+        const historyCaseData = {};
+
+        function watchCaseHistory(db, screenKey) {
+            const listenerKey = 'case_history_' + screenKey;
+            if (activeListeners[listenerKey]) {
+                activeListeners[listenerKey]();
+                activeListeners[listenerKey] = null;
+            }
+            const listEl = document.getElementById(screenKey + 'HistoryList');
+            if (!listEl) return;
+
+            activeListeners[listenerKey] = db.collection('cases').orderBy('caseNumber').onSnapshot(snapshot => {
+                const finishedCases = [];
+                snapshot.forEach(doc => {
+                    const d = doc.data();
+                    if (!d.caseNumber || doc.id === 'current') return;
+                    historyCaseData[d.caseNumber] = d;
+                    if (d.published) finishedCases.push(d);
+                });
+
+                if (finishedCases.length === 0) {
+                    listEl.innerHTML = '<p style="color:#999; font-size:13px;">Henüz tamamlanmış / paylaşılmış bir deneme yok.</p>';
+                    return;
+                }
+
+                listEl.innerHTML = finishedCases.map(c => `
+                    <details class="history-item" id="${screenKey}HistoryItem_${c.caseNumber}">
+                        <summary class="history-item-summary">Deneme - ${c.caseNumber} <span style="color:#999; font-weight:normal;">(${c.theme || ''}${c.title ? ' — ' + c.title : ''})</span></summary>
+                        <div class="history-item-body" id="${screenKey}HistoryBody_${c.caseNumber}">
+                            <p style="color:#999; font-size:13px;">Açtığında yüklenecek...</p>
+                        </div>
+                    </details>
+                `).join('');
+
+                finishedCases.forEach(c => {
+                    const detailsEl = document.getElementById(`${screenKey}HistoryItem_${c.caseNumber}`);
+                    if (detailsEl && !detailsEl.dataset.wired) {
+                        detailsEl.dataset.wired = '1';
+                        detailsEl.addEventListener('toggle', () => {
+                            if (detailsEl.open) loadHistoryDetail(db, screenKey, c.caseNumber);
+                        });
+                    }
+                });
+            }, err => addDebugLog("✗ deneme geçmişi dinleme hatası (" + screenKey + "): " + err.message));
+        }
+
+        async function loadHistoryDetail(db, screenKey, caseNumber) {
+            const bodyEl = document.getElementById(`${screenKey}HistoryBody_${caseNumber}`);
+            if (!bodyEl || bodyEl.dataset.loaded) return;
+            bodyEl.dataset.loaded = '1';
+
+            const c = historyCaseData[caseNumber] || {};
+            try {
+                const snap = await db.collection('evaluations').where('case_number', '==', caseNumber).get();
+                const evals = [];
+                snap.forEach(d => evals.push(d.data()));
+
+                bodyEl.innerHTML = `
+                    <div class="case-text" style="margin-bottom:15px;">
+                        <strong>Tema: ${c.theme || '-'}</strong>${c.title ? ' — ' + c.title : ''}<br><br>
+                        ${(c.content || '').replace(/\n/g, '<br>')}
+                    </div>
+                    ${buildResultCardsHTML(evals)}
+                `;
+            } catch (err) {
+                bodyEl.innerHTML = '<p style="color:#c00; font-size:13px;">Sonuçlar yüklenemedi: ' + err.message + '</p>';
+                bodyEl.dataset.loaded = '';
+                addDebugLog("✗ geçmiş deneme detay hatası (#" + caseNumber + "): " + err.message);
+            }
+        }
+
+        // ==================== EĞİTİMLER ====================
+        window._trainingsCache = {};
+
+        function watchTrainings(db, screenKey, isAdmin) {
+            const listenerKey = 'trainings_' + screenKey;
+            if (activeListeners[listenerKey]) {
+                activeListeners[listenerKey]();
+                activeListeners[listenerKey] = null;
+            }
+            const listEl = document.getElementById(screenKey + 'TrainingsList');
+            if (!listEl) return;
+
+            activeListeners[listenerKey] = db.collection('trainings').orderBy('uploadedAt', 'desc').onSnapshot(snapshot => {
+                if (snapshot.empty) {
+                    listEl.innerHTML = '<p style="color:#999; font-size:13px;">Henüz eğitim eklenmedi.</p>';
+                    return;
+                }
+                const items = [];
+                snapshot.forEach(doc => items.push({ id: doc.id, ...doc.data() }));
+                items.forEach(t => window._trainingsCache[t.id] = t);
+
+                listEl.innerHTML = items.map(t => `
+                    <div class="training-card">
+                        <div class="clearfix">
+                            <strong>${t.title || 'İsimsiz Eğitim'}</strong>
+                            ${isAdmin ? `<button onclick="deleteTraining('${t.id}')" style="float:right; background:#f44336; padding:6px 14px; font-size:12px;">Sil</button>` : ''}
+                        </div>
+                        ${t.description ? `<p style="margin-top:6px; color:#666; font-size:13px;">${t.description}</p>` : ''}
+                        <p style="margin-top:6px; color:#999; font-size:12px;">${t.fileName || ''}${t.fileSizeBytes ? ' (' + Math.round(t.fileSizeBytes / 1024) + ' KB)' : ''}</p>
+                        <div style="margin-top:10px;">
+                            <button onclick="openTraining('${t.id}')" style="background:#667eea;">👁️ Oku</button>
+                            <button onclick="downloadTraining('${t.id}')" style="background:#28a745;">⬇️ İndir</button>
+                        </div>
+                    </div>
+                `).join('');
+            }, err => addDebugLog("✗ eğitimler dinleme hatası: " + err.message));
+        }
+
+        function base64ToBlob(base64, mime) {
+            const byteChars = atob(base64);
+            const byteNumbers = new Array(byteChars.length);
+            for (let i = 0; i < byteChars.length; i++) byteNumbers[i] = byteChars.charCodeAt(i);
+            const byteArray = new Uint8Array(byteNumbers);
+            return new Blob([byteArray], { type: mime || 'application/octet-stream' });
+        }
+
+        function openTraining(id) {
+            const t = window._trainingsCache[id];
+            if (!t) return;
+            const url = URL.createObjectURL(base64ToBlob(t.fileDataBase64, t.fileType));
+            window.open(url, '_blank');
+        }
+
+        function downloadTraining(id) {
+            const t = window._trainingsCache[id];
+            if (!t) return;
+            const url = URL.createObjectURL(base64ToBlob(t.fileDataBase64, t.fileType));
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = t.fileName || 'egitim';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            URL.revokeObjectURL(url);
+        }
+
+        async function deleteTraining(id) {
+            if (!confirm('Bu eğitimi silmek istediğine emin misin?')) return;
+            try {
+                await firebaseDB.collection('trainings').doc(id).delete();
+                addDebugLog("✓ Eğitim silindi: " + id);
+            } catch (err) {
+                addDebugLog("✗ Eğitim silme hatası: " + err.message);
+                alert('Silinemedi: ' + err.message);
+            }
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        async function uploadTraining() {
+            const titleInput = document.getElementById('trainingTitleInput');
+            const descInput = document.getElementById('trainingDescInput');
+            const fileInput = document.getElementById('trainingFileInput');
+            const btn = document.getElementById('trainingUploadBtn');
+
+            const title = titleInput.value.trim();
+            const file = fileInput.files[0];
+
+            if (!title) { alert('Lütfen bir başlık gir.'); return; }
+            if (!file) { alert('Lütfen bir dosya seç.'); return; }
+
+            const MAX_BYTES = 650 * 1024;
+            if (file.size > MAX_BYTES) {
+                alert('Dosya çok büyük (maks. ~650 KB). Daha küçük bir dosya seç.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Yükleniyor...';
+
+            try {
+                const base64 = await fileToBase64(file);
+                await firebaseDB.collection('trainings').add({
+                    title,
+                    description: descInput.value.trim() || '',
+                    fileName: file.name,
+                    fileType: file.type || 'application/octet-stream',
+                    fileSizeBytes: file.size,
+                    fileDataBase64: base64,
+                    uploadedBy: firebaseAuth.currentUser.email,
+                    uploadedAt: new Date()
+                });
+                addDebugLog("✓ Eğitim yüklendi: " + title);
+                titleInput.value = '';
+                descInput.value = '';
+                fileInput.value = '';
+            } catch (err) {
+                addDebugLog("✗ Eğitim yükleme hatası: " + err.message);
+                alert('Yüklenemedi: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '📤 Yükle';
+            }
         }
 
         function watchWaitingCount(caseNumber, db) {
@@ -664,6 +1046,9 @@
 
         function setupAdminPanel(db, user) {
             addDebugLog("Admin paneli kuruluyor: " + user.email);
+
+            watchCaseHistory(db, 'admin');
+            watchTrainings(db, 'admin', true);
 
             db.collection('participants').onSnapshot(snapshot => {
                 addDebugLog("participants güncellendi: " + snapshot.size + " kayıt");
@@ -728,10 +1113,12 @@
 
                 const box = document.getElementById('adminCaseBox');
                 const statusEl = document.getElementById('roundStatusAdmin');
+                const currentAttemptStatusEl = document.getElementById('adminCurrentAttemptStatus');
 
                 if (!data || !data.caseNumber) {
                     box.style.display = 'none';
                     statusEl.textContent = 'Henüz bir vaka başlatılmadı.';
+                    if (currentAttemptStatusEl) currentAttemptStatusEl.textContent = 'Henüz bir vaka başlatılmadı.';
                     return;
                 }
 
@@ -742,6 +1129,7 @@
                     finished: '✓ tamamlandı ve katılımcılara paylaşıldı'
                 };
                 statusEl.textContent = `Vaka #${data.caseNumber} — ${statusLabels[data.status] || data.status}`;
+                if (currentAttemptStatusEl) currentAttemptStatusEl.textContent = `Deneme - ${data.caseNumber} — ${statusLabels[data.status] || data.status}`;
 
                 const publishBtn = document.getElementById('publishResultsBtn');
                 if (publishBtn) {
@@ -820,6 +1208,9 @@
         function setupParticipantScreen(db, user) {
             addDebugLog("Katılımcı ekranı kuruluyor: " + user.email);
 
+            watchCaseHistory(db, 'participant');
+            watchTrainings(db, 'participant', false);
+
             db.collection('participants').doc(user.uid).set({
                 name: user.displayName || 'Katılımcı',
                 email: user.email,
@@ -834,14 +1225,27 @@
                 const data = doc.data();
                 addDebugLog("session/current güncellendi: " + (data ? data.status + ' (#' + data.caseNumber + ')' : 'yok'));
 
+                const currentAttemptSummaryEl = document.getElementById('participantCurrentAttemptSummary');
+
                 if (!data || !data.caseNumber) {
                     document.getElementById('waitingArea').style.display = 'block';
                     document.getElementById('competitionArea').style.display = 'none';
+                    if (currentAttemptSummaryEl) currentAttemptSummaryEl.textContent = 'Şu an aktif bir deneme yok.';
                     return;
                 }
 
                 document.getElementById('waitingArea').style.display = 'none';
                 document.getElementById('competitionArea').style.display = 'block';
+
+                if (currentAttemptSummaryEl) {
+                    const summaryLabels = {
+                        started: 'devam ediyor',
+                        evaluating: 'yapay zeka değerlendiriyor',
+                        reviewed: 'değerlendirme tamamlandı, yönetici paylaşımı bekleniyor',
+                        finished: 'tamamlandı ve paylaşıldı'
+                    };
+                    currentAttemptSummaryEl.textContent = `Deneme - ${data.caseNumber} — ${summaryLabels[data.status] || data.status} (yukarıdaki alanda görüntülenir)`;
+                }
 
                 if (data.caseNumber !== activeCaseNumber) {
                     addDebugLog("✓ Yeni vaka algılandı (#" + data.caseNumber + ")");
