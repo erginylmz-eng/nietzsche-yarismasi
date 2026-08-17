@@ -12,7 +12,8 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 - **📊 Otomatik Değerlendirme**: Tüm katılımcılar cevaplayınca (veya süre dolunca) Gemini AI otomatik olarak puanlar
 - **💸 Ücretsiz**: Gemini API'nin ücretsiz katmanı kullanılıyor — kredi kartı ya da ödeme gerekmez
 - **🏆 Ödüllendirme**: Vaka başına en iyi cevaba 20.000 TL, kazanan otomatik belirlenir
-- **📱 Responsive Design**: Tüm cihazlarda uyumlu arayüz
+- **📱 Responsive Design**: Mobil telefon ve tablet genişliklerinde (media query ile) düzen otomatik daralır — başlık, buton, sayaç, katılımcı kartları ve eğitim önizleme penceresi küçük ekranlarda taşma yapmadan yeniden düzenlenir
+- **🎨 Pastel Tasarım**: Arayüz, gradyan, buton ve rozet renkleri daha yumuşak/pastel bir palete güncellendi (okunabilirlik korunarak)
 - **📚 Geçmiş Denemeler**: Paylaşılmış her vaka "Deneme - N" olarak açılır/kapanır bir listede kalıcı olarak saklanır; herkes istediği zaman geri dönüp cevapları/puanları/gerekçeleri tekrar görebilir
 - **✅ Kazanımlar / ❌ Hatalar**: Her değerlendirme artık sadece güçlü yönleri değil, puanın nereden/neden kırıldığını ve kişiye özel gelişim önerisini de ayrı ayrı gösterir
 - **🎓 Eğitimler**: Admin, katılımcılar için eğitim dosyası (~650 KB'a kadar PDF/Word/Excel/metin/resim) yükleyebilir. Sadece "Oku" ile görüntülenir — indirme butonu yok; Word (.docx) ve Excel (.xlsx) dosyaları da tarayıcı içinde okunabilir şekilde gösterilir. Admin panelinde her eğitim için "kim okudu / kim okumadı" listesi görünür
