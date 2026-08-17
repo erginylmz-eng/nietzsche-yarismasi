@@ -584,6 +584,21 @@
                     </div>
                 </details>
             </div>
+
+            <div class="case-container">
+                <details class="collapsible">
+                    <summary class="collapsible-summary">📊 Eğitim Katılım Raporu</summary>
+                    <div class="collapsible-body">
+                        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">
+                            Her katılımcının hangi eğitimi okuduğunu ve ne kadar süre harcadığını gösterir
+                            (✓ = okudu + süre, ✗ = henüz okumadı).
+                        </p>
+                        <div id="adminTrainingReport">
+                            <p style="color: #999; font-size: 13px;">Yükleniyor...</p>
+                        </div>
+                    </div>
+                </details>
+            </div>
         </div>
 
         <!-- PARTICIPANT SCREEN -->
@@ -983,6 +998,7 @@
                 if (isAdmin) {
                     adminTrainingsListCache = items;
                     renderAdminTrainingsList();
+                    renderAdminTrainingReport();
                     return;
                 }
 
@@ -1014,7 +1030,7 @@
                 const notRead = adminParticipantsRosterCache.filter(p => !readerUids.has(p.uid));
 
                 const readListHtml = readers.length > 0
-                    ? readers.map(r => `<div style="color:#1e7e34; font-size:12px; margin-bottom:3px;">✓ ${r.name || r.email}</div>`).join('')
+                    ? readers.map(r => `<div style="color:#1e7e34; font-size:12px; margin-bottom:3px;">✓ ${r.name || r.email} — ${formatDuration(r.totalDurationMs)}</div>`).join('')
                     : '<div style="color:#999; font-size:12px;">Henüz kimse okumadı.</div>';
                 const notReadListHtml = notRead.length > 0
                     ? notRead.map(p => `<div style="color:#a71d2a; font-size:12px; margin-bottom:3px;">✗ ${p.name || p.email}</div>`).join('')
@@ -1045,6 +1061,61 @@
             }).join('');
         }
 
+        // "📊 Eğitim Katılım Raporu" bölümü: her katılımcı × her eğitim için
+        // okundu/okunmadı ve harcanan süreyi tek bir tabloda gösterir.
+        function renderAdminTrainingReport() {
+            const el = document.getElementById('adminTrainingReport');
+            if (!el) return;
+
+            if (adminParticipantsRosterCache.length === 0) {
+                el.innerHTML = '<p style="color:#999; font-size:13px;">Henüz kayıtlı katılımcı yok.</p>';
+                return;
+            }
+            if (adminTrainingsListCache.length === 0) {
+                el.innerHTML = '<p style="color:#999; font-size:13px;">Henüz eğitim eklenmedi.</p>';
+                return;
+            }
+
+            const headerCols = adminTrainingsListCache.map(t =>
+                `<th style="padding:10px; border-bottom:2px solid #eee; text-align:left; font-size:12px; color:#667eea; white-space:nowrap;">${t.title || 'İsimsiz'}</th>`
+            ).join('');
+
+            const rows = adminParticipantsRosterCache.map(p => {
+                let totalMs = 0;
+                const cells = adminTrainingsListCache.map(t => {
+                    const readers = adminTrainingReadsCache[t.id] || [];
+                    const rec = readers.find(r => r.uid === p.uid);
+                    if (rec && rec.totalDurationMs > 0) {
+                        totalMs += rec.totalDurationMs;
+                        return `<td style="padding:10px; border-bottom:1px solid #f0f0f0; font-size:12px; color:#1e7e34; white-space:nowrap;">✓ ${formatDuration(rec.totalDurationMs)}</td>`;
+                    }
+                    return `<td style="padding:10px; border-bottom:1px solid #f0f0f0; font-size:12px; color:#a71d2a;">✗</td>`;
+                }).join('');
+                return `
+                    <tr>
+                        <td style="padding:10px; border-bottom:1px solid #f0f0f0; font-size:13px; font-weight:bold; white-space:nowrap;">${p.name || p.email}</td>
+                        ${cells}
+                        <td style="padding:10px; border-bottom:1px solid #f0f0f0; font-size:13px; font-weight:bold; color:#333; white-space:nowrap;">${formatDuration(totalMs)}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            el.innerHTML = `
+                <div style="overflow-x:auto;">
+                    <table style="border-collapse:collapse; width:100%; min-width:500px;">
+                        <thead>
+                            <tr>
+                                <th style="padding:10px; border-bottom:2px solid #eee; text-align:left; font-size:12px; color:#333;">Katılımcı</th>
+                                ${headerCols}
+                                <th style="padding:10px; border-bottom:2px solid #eee; text-align:left; font-size:12px; color:#333;">Toplam Süre</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            `;
+        }
+
         function watchTrainingReads(db) {
             const listenerKey = 'training_reads_admin';
             if (activeListeners[listenerKey]) {
@@ -1057,29 +1128,121 @@
                     const d = doc.data();
                     if (!d.trainingId) return;
                     if (!map[d.trainingId]) map[d.trainingId] = [];
-                    map[d.trainingId].push({ uid: d.uid, name: d.name, email: d.email });
+                    map[d.trainingId].push({
+                        uid: d.uid,
+                        name: d.name,
+                        email: d.email,
+                        totalDurationMs: d.totalDurationMs || 0,
+                        sessionsCount: d.sessionsCount || 0,
+                        lastReadAt: d.lastReadAt || null,
+                        lastSessionStartedAt: d.lastSessionStartedAt || null,
+                        lastSessionEndedAt: d.lastSessionEndedAt || null
+                    });
                 });
                 adminTrainingReadsCache = map;
                 renderAdminTrainingsList();
+                renderAdminTrainingReport();
             }, err => addDebugLog("✗ okuma kayıtları dinleme hatası: " + err.message));
         }
 
-        async function recordTrainingRead(trainingId) {
+        // ==================== EĞİTİM OKUMA SÜRESİ TAKİBİ ====================
+        // "Oku" ile önizleme açıldığında başlar, "Kapat"a basınca / sekme
+        // gizlenince / farklı bir eğitim açılınca biter. Ani kapanmalara karşı
+        // okurken her 20 saniyede bir toplam süreye kısmi ekleme yapılır
+        // (heartbeat) — böylece sekme aniden kapansa bile en fazla ~20 saniyelik
+        // bir kayıp olur, tüm oturum kaybolmaz.
+        let activeReadSession = null;
+        const READ_HEARTBEAT_MS = 20000;
+
+        async function startReadSession(trainingId) {
+            await endReadSession();
+
             const user = firebaseAuth.currentUser;
-            if (!user || user.email === ADMIN_EMAIL) return; // admin'in kendi okumaları takip edilmez
+            if (!user || user.email === ADMIN_EMAIL) return; // admin'in kendi önizlemeleri takip edilmez
+
+            const now = Date.now();
+            activeReadSession = {
+                trainingId,
+                uid: user.uid,
+                name: user.displayName || '',
+                email: user.email,
+                startedAt: now,
+                lastFlushAt: now,
+                intervalId: null
+            };
+
             try {
-                const docId = `${trainingId}_${user.uid}`;
-                await firebaseDB.collection('training_reads').doc(docId).set({
+                await firebaseDB.collection('training_reads').doc(`${trainingId}_${user.uid}`).set({
                     trainingId,
                     uid: user.uid,
-                    name: user.displayName || '',
-                    email: user.email,
-                    readAt: new Date()
+                    name: activeReadSession.name,
+                    email: activeReadSession.email,
+                    lastSessionStartedAt: new Date(now),
+                    sessionsCount: firebase.firestore.FieldValue.increment(1)
                 }, { merge: true });
+                addDebugLog("▶ Eğitim okuma başladı: " + trainingId);
             } catch (err) {
-                addDebugLog("✗ okuma kaydı hatası: " + err.message);
+                addDebugLog("✗ okuma başlangıcı kaydı hatası: " + err.message);
+            }
+
+            activeReadSession.intervalId = setInterval(() => flushReadSession(false), READ_HEARTBEAT_MS);
+        }
+
+        async function flushReadSession(isFinal) {
+            if (!activeReadSession) return;
+            const session = activeReadSession;
+            const now = Date.now();
+            const deltaMs = now - session.lastFlushAt;
+            session.lastFlushAt = now;
+
+            if (isFinal) {
+                clearInterval(session.intervalId);
+                activeReadSession = null;
+            }
+
+            if (deltaMs < 500) return;
+
+            try {
+                const update = {
+                    trainingId: session.trainingId,
+                    uid: session.uid,
+                    name: session.name,
+                    email: session.email,
+                    totalDurationMs: firebase.firestore.FieldValue.increment(deltaMs),
+                    lastReadAt: new Date()
+                };
+                if (isFinal) update.lastSessionEndedAt = new Date();
+                await firebaseDB.collection('training_reads').doc(`${session.trainingId}_${session.uid}`).set(update, { merge: true });
+                if (isFinal) addDebugLog(`✓ Eğitim okuma bitti: ${session.trainingId} (${Math.round((now - session.startedAt) / 1000)} sn)`);
+            } catch (err) {
+                addDebugLog("✗ okuma süresi güncelleme hatası: " + err.message);
             }
         }
+
+        async function endReadSession() {
+            if (!activeReadSession) return;
+            await flushReadSession(true);
+        }
+
+        function formatDuration(ms) {
+            if (!ms || ms < 1000) return '0 sn';
+            const totalSeconds = Math.round(ms / 1000);
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            if (hours > 0) return `${hours} sa ${minutes} dk`;
+            if (minutes > 0) return `${minutes} dk ${seconds} sn`;
+            return `${seconds} sn`;
+        }
+
+        // Sekme gizlenince (uygulama değiştirme, sekme kapatma vb.) aktif
+        // okuma oturumunu güvenli şekilde sonlandırır.
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) endReadSession();
+        });
+        window.addEventListener('beforeunload', () => {
+            if (activeReadSession) flushReadSession(true);
+        });
 
         function base64ToBlob(base64, mime) {
             const byteChars = atob(base64);
@@ -1120,12 +1283,12 @@
         // Eğitimi tarayıcı içinde önizler: Word (.docx) mammoth.js ile HTML'e,
         // Excel (.xlsx/.xls) SheetJS ile tabloya çevrilir; PDF/resim/metin
         // doğrudan gösterilir. Diğer türlerde sadece indirme önerilir.
-        // Katılımcı için bu görüntüleme "okundu" olarak kaydedilir.
+        // Katılımcı için bu görüntüleme başlangıç/bitiş süresiyle birlikte kaydedilir.
         async function openTraining(id) {
             const t = window._trainingsCache[id];
             if (!t) return;
 
-            recordTrainingRead(id);
+            await startReadSession(id);
 
             const modal = document.getElementById('trainingPreviewModal');
             const titleEl = document.getElementById('trainingPreviewTitle');
@@ -1178,6 +1341,7 @@
         function closeTrainingPreview() {
             const modal = document.getElementById('trainingPreviewModal');
             if (modal) modal.style.display = 'none';
+            endReadSession();
         }
 
         async function deleteTraining(id) {
@@ -1331,6 +1495,7 @@
                 // kadrosunu güncel tut (bağlı olsun olmasın, tüm zamanlar).
                 adminParticipantsRosterCache = docs.map(d => ({ uid: d.id, name: d.data().name, email: d.data().email }));
                 renderAdminTrainingsList();
+                renderAdminTrainingReport();
             }, err => addDebugLog("✗ participants dinleme hatası: " + err.message));
 
             db.collection('responses').onSnapshot(snapshot => {
