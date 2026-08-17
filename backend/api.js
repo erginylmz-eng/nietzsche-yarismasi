@@ -41,6 +41,7 @@ const MODEL = 'gemini-3.5-flash';
 
 const THEMES = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
 const ROUND_DURATION_MS = 30 * 60 * 1000;
+const ADMIN_EMAIL = 'erginylmz@gmail.com';
 
 // Ücretsiz katmanın dakikalık istek sınırına takılırsak kısa bekleyip tekrar dene
 async function callGemini(prompt, maxRetries = 3) {
@@ -220,7 +221,8 @@ app.post('/api/evaluate-round', async (req, res) => {
             const participantsSnap = await tx.get(db.collection('participants').where('status', '==', 'connected'));
             const responsesSnap = await tx.get(db.collection('responses').where('case_number', '==', caseNumber));
 
-            const totalParticipants = participantsSnap.size;
+            // Admin bir katılımcı değildir; sayıma dahil edilmez.
+            const totalParticipants = participantsSnap.docs.filter(d => d.data().email !== ADMIN_EMAIL).length;
             const submittedCount = responsesSnap.size;
             const timeUp = (Date.now() - session.startTime) >= session.duration;
 
@@ -278,15 +280,42 @@ app.post('/api/evaluate-round', async (req, res) => {
             });
         }
 
-        await sessionRef.update({ status: 'finished', evaluationStatus: 'done' });
+        // Değerlendirme bitti ama sonuçlar henüz katılımcılara açık değil —
+        // önce sadece admin görür ("reviewed"). Admin "Sonuçları Paylaş"
+        // butonuna basınca /api/publish-results status'u 'finished' yapar.
+        await sessionRef.update({ status: 'reviewed', evaluationStatus: 'done' });
 
-        console.log(`✓ Vaka #${caseNumber} değerlendirmesi tamamlandı`);
+        console.log(`✓ Vaka #${caseNumber} değerlendirmesi tamamlandı (admin onayı bekleniyor)`);
         res.json({ success: true, skipped: false, caseNumber, count: evaluations.length });
     } catch (error) {
         console.error('evaluate-round error:', error);
         try {
             await sessionRef.update({ evaluationStatus: 'pending', status: 'started' });
         } catch (e2) { /* ignore */ }
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+// ==================== API: SONUÇLARI KATILIMCILARA YAYINLA ====================
+// Admin, değerlendirmeyi inceledikten sonra bu uca istek atınca sonuçlar
+// (cevaplar + puanlar + gerekçeler) tüm katılımcılara açılır.
+app.post('/api/publish-results', async (req, res) => {
+    const sessionRef = db.collection('session').doc('current');
+    try {
+        const sessionDoc = await sessionRef.get();
+        if (!sessionDoc.exists) {
+            return res.status(400).json({ success: false, error: 'Aktif oturum yok.' });
+        }
+        const session = sessionDoc.data();
+        if (session.status !== 'reviewed') {
+            return res.status(400).json({ success: false, error: `Sonuçlar şu an paylaşılamaz (durum: ${session.status}).` });
+        }
+
+        await sessionRef.update({ status: 'finished' });
+        console.log(`✓ Vaka #${session.caseNumber} sonuçları katılımcılara yayınlandı`);
+        res.json({ success: true, caseNumber: session.caseNumber });
+    } catch (error) {
+        console.error('publish-results error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
