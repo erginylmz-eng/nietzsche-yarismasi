@@ -7,6 +7,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 - **🔐 Google OAuth**: Google hesabıyla güvenli giriş
 - **🚫 Beyaz Liste Erişim Kontrolü**: Sadece yönetici + belirlenen 3 katılımcının e-postası platforma girebilir. Listede olmayan bir hesap giriş yapmaya çalıştığında oturumu anında kapatılır ve "ÇOK ŞANSSIZSINIZ! Friedrich Wilhelm Nietzsche Çalışma Grubu'nda olmadığınız için bu platforma erişemezsiniz" mesajı gösterilir. Aynı kısıtlama Firestore güvenlik kurallarında da uygulanır (tarayıcı konsolundan doğrudan erişim denemeleri de engellenir)
 - **👀 Canlı Katılımcı Paneli**: Yönetici, kayıt olan katılımcıları anlık görür
+- **🟢 Gerçek Zamanlı Çevrimiçi Durumu**: Katılımcı sekmesi açıkken her 15 saniyede bir "hâlâ buradayım" sinyali (heartbeat) gönderir. Admin panelindeki "Bağlı / Bağlı Değil" rozeti bu sinyale göre canlı hesaplanır — biri sekmesini kapatır ya da bağlantısını kaybederse ~40 saniye içinde otomatik olarak "Bağlı Değil" görünür, elle "Çıkar"a gerek kalmaz. Not: bir tur zaten başladıktan sonra "kaç kişi cevap vermesi bekleniyor" sayımı hâlâ ilk bağlanma anındaki kayda dayanır — turu ortasında sessizce ayrılan biri o turdan çıkarmak isterseniz yine elle "Çıkar" kullanmanız gerekir
 - **🤖 AI-Destekli Vaka Üretimi**: Yarışma başlatıldığı anda Gemini API, önceden kimsenin bilmediği bir vaka üretir — yönetici de dahil herkes vakayı aynı anda görür
 - **⏱️ Real-time Timer**: 30 dakikalık çalışma süresi, sayfa yenilense bile doğru kalır
 - **⏳ Bekleme Ekranı**: Bir katılımcı cevabını gönderdiğinde diğerlerinin bitirmesini bekler
@@ -143,7 +144,7 @@ Sayfanın en altındaki siyah/yeşil **Sistem Günlüğü** kutusu her ekranda (
 
 ### Vaka görünmüyor / yarışma başlamıyor
 - Admin panelindeki Sistem Günlüğü'nde "Vaka başlatma hatası" var mı bak
-- En az 1 katılımcının "Bağlı" durumda olması gerekir (buton aksi halde pasif kalır)
+- Kayıtlı katılımcıların **hepsinin** o an "Bağlı" (çevrimiçi) görünmesi gerekir — biri bile "Bağlı Değil" ise buton pasif kalır; gerekirse çevrimdışı görüneni "Çıkar" ile listeden kaldır
 
 ## 📧 İletişim
 
