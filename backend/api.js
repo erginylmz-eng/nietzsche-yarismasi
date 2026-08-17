@@ -32,6 +32,10 @@ const FieldValue = admin.firestore.FieldValue;
 // ==================== GEMINI (ÜCRETSİZ KATMAN) ====================
 // API key: https://aistudio.google.com/apikey adresinden ücretsiz alınır,
 // kredi kartı gerektirmez. Fatura hesabı bağlamadığın sürece ücretsiz katmanda kalır.
+if (!process.env.GEMINI_API_KEY) {
+    console.error('✗ UYARI: GEMINI_API_KEY ortam değişkeni tanımlı değil! Railway → Variables kısmını kontrol et.');
+}
+
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODEL = 'gemini-2.5-flash';
 
@@ -40,6 +44,10 @@ const ROUND_DURATION_MS = 30 * 60 * 1000;
 
 // Ücretsiz katmanın dakikalık istek sınırına takılırsak kısa bekleyip tekrar dene
 async function callGemini(prompt, maxRetries = 3) {
+    if (!process.env.GEMINI_API_KEY) {
+        throw new Error('GEMINI_API_KEY tanımlı değil. Railway → Variables kısmında bu değişkeni ekleyip yeniden deploy et.');
+    }
+
     let lastError;
     for (let attempt = 0; attempt < maxRetries; attempt++) {
         try {
