@@ -5,6 +5,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 ## 📋 Özellikler
 
 - **🔐 Google OAuth**: Google hesabıyla güvenli giriş
+- **🚫 Beyaz Liste Erişim Kontrolü**: Sadece yönetici + belirlenen 3 katılımcının e-postası platforma girebilir. Listede olmayan bir hesap giriş yapmaya çalıştığında oturumu anında kapatılır ve "ÇOK ŞANSSIZSINIZ! Friedrich Wilhelm Nietzsche Çalışma Grubu'nda olmadığınız için bu platforma erişemezsiniz" mesajı gösterilir. Aynı kısıtlama Firestore güvenlik kurallarında da uygulanır (tarayıcı konsolundan doğrudan erişim denemeleri de engellenir)
 - **👀 Canlı Katılımcı Paneli**: Yönetici, kayıt olan katılımcıları anlık görür
 - **🤖 AI-Destekli Vaka Üretimi**: Yarışma başlatıldığı anda Gemini API, önceden kimsenin bilmediği bir vaka üretir — yönetici de dahil herkes vakayı aynı anda görür
 - **⏱️ Real-time Timer**: 30 dakikalık çalışma süresi, sayfa yenilense bile doğru kalır
@@ -48,6 +49,8 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 4. **Authentication → Settings → Authorized domains** kısmına Railway domain'ini ekle (örn. `nietzsche-yarismasi-production.up.railway.app`)
 5. **Proje Ayarları (⚙️) → Service Accounts → Generate New Private Key** — bu indirdiğin JSON dosyasından `project_id`, `client_email`, `private_key` değerlerine ihtiyacın olacak (backend'in Firestore'a admin olarak yazabilmesi için)
 6. **Firestore Database → Rules** kısmına bu repodaki `firestore.rules` dosyasının tam içeriğini yapıştır ve **Publish**'e bas (Eğitimler özelliği için `trainings` koleksiyonu kuralı eklendi — eskisinin üzerine tamamını yaz)
+
+> **Katılımcı beyaz listesini güncellemek istersen:** `public/index.html` içindeki `ALLOWED_PARTICIPANT_EMAILS` dizisini ve `firestore.rules` içindeki `isAllowed()` fonksiyonundaki e-posta listesini **birlikte** güncelleyip Firestore Rules'u tekrar **Publish**'lemen gerekir — sadece birini değiştirmek yeterli olmaz (istemci ve sunucu tarafı ayrı ayrı kontrol ediyor).
 
 ### 3. Environment Variables (Railway)
 
