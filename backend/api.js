@@ -95,22 +95,45 @@ async function pickTheme() {
 async function generateCaseWithAI() {
     const theme = await pickTheme();
 
-    const prompt = `Sen bir kurumsal etik danışmanısın. Friedrich Nietzsche felsefesinin perspektifinden değerlendirilmek üzere, "${theme}" teması çerçevesinde gerçekçi, özgün bir kurumsal vaka yaz.
+    const prompt = `Sen bir kurumsal etik danışmanısın. "${theme}" teması çerçevesinde gerçekçi, özgün bir kurumsal vaka yaz. Bu vaka, katılımcıların cevapları daha sonra ayrı ve gizli bir değerlendirme aşamasında bir felsefi çerçeveye göre puanlanacak — ama bu ÇERÇEVE VAKANIN İÇİNDE ASLA BELİRTİLMEMELİ. Katılımcının hangi düşünce sistemini uygulayacağını kendi başına, dışarıdan hiçbir ipucu almadan bulması gerekiyor; vaka metninde herhangi bir felsefi yönlendirme veya ipucu olursa bu katılımcıyı yönlendirir ve değerlendirmeyi anlamsızlaştırır.
 
 Vaka şunları içermeli:
 1. Gerçekçi bir kurumsal/organizasyonel durum
-2. Etik bir ikilem veya çatışma
+2. Etik bir ikilem veya çatışma — birden fazla makul bakış açısına açık, tek doğru cevabı olmayan bir durum
 3. Karar alınması gereken somut bir nokta
-4. Nietzsche'nin güç istenci, köle/efendi ahlakı, değerlerin yeniden değerlendirilmesi gibi kavramlarıyla analiz edilebilecek zengin bir zemin
 
-Vaka 250-400 kelime uzunluğunda, akıcı bir anlatı olarak yazılsın (madde işareti kullanma, düz metin). Vakanın sonunda katılımcıya yöneltilen açık bir soru olsun: "Nietzsche'nin felsefesi ışığında bu duruma nasıl yaklaşılmalıdır?" gibi.
+Vaka 250-400 kelime uzunluğunda, akıcı bir anlatı olarak yazılsın (madde işareti kullanma, düz metin). ASLA hiçbir filozofun adını, felsefi akımı, kavramı veya terimini (örneğin güç istenci, köle/efendi ahlakı, değerlerin yeniden değerlendirilmesi gibi) kullanma veya ima etme — vaka sade, nötr bir iş/organizasyon anlatısı olmalı. Vakanın sonunda katılımcıya yöneltilen açık ve nötr bir karar sorusu olsun — sadece şu kalıba benzer bir şey: "Bu durumda yönetici olarak ne karar verirdiniz? Kararınızı ve gerekçenizi açıklayın." Bu soruda da hiçbir felsefi referans, isim veya kavram GEÇMEMELİ.
 
 Sadece vakanın kendisini yaz, başka açıklama ekleme. İlk satırda kısa, çarpıcı bir başlık olsun (örn: "Terfi Kararı"), sonrasında vaka metni gelsin.`;
 
-    const raw = (await callGemini(prompt)).trim();
-    const lines = raw.split('\n').filter(l => l.trim().length > 0);
-    const title = lines[0]?.replace(/^#+\s*/, '').trim() || theme;
-    const content = lines.slice(1).join('\n\n').trim() || raw;
+    // Güvenlik ağı: yapay zeka talimata rağmen yine de bir felsefi isim/kavram
+    // sızdırırsa (ör. "Nietzsche", "güç istenci") vakayı katılımcılara yönlendirici
+    // olmaması için bir kez daha üretmeyi dener. İkinci denemede de sızarsa,
+    // en azından bariz "Nietzsche" kelimesini metinden temizleyerek devam eder.
+    const LEAK_PATTERN = /nietzsche|güç istenci|köle ahlakı|efendi ahlakı|übermensch|üstinsan|ebedi dönüş/i;
+
+    async function generateOnce() {
+        const raw = (await callGemini(prompt)).trim();
+        const lines = raw.split('\n').filter(l => l.trim().length > 0);
+        const title = lines[0]?.replace(/^#+\s*/, '').trim() || theme;
+        const content = lines.slice(1).join('\n\n').trim() || raw;
+        return { title, content };
+    }
+
+    let { title, content } = await generateOnce();
+
+    if (LEAK_PATTERN.test(title) || LEAK_PATTERN.test(content)) {
+        console.warn('⚠ Vaka üretiminde felsefi referans sızıntısı tespit edildi, yeniden deneniyor...');
+        const retry = await generateOnce();
+        if (!LEAK_PATTERN.test(retry.title) && !LEAK_PATTERN.test(retry.content)) {
+            title = retry.title;
+            content = retry.content;
+        } else {
+            console.warn('⚠ İkinci denemede de sızıntı var, isimler metinden temizleniyor.');
+            title = title.replace(LEAK_PATTERN, '').trim();
+            content = content.replace(LEAK_PATTERN, '').trim();
+        }
+    }
 
     return { theme, title, content };
 }
