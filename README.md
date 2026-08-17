@@ -21,9 +21,10 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 3. Sunucu (backend), Gemini API'yi çağırarak o an, özgün bir vaka üretir ve Firestore'a yazar. Bu an itibarıyla hem admin hem tüm katılımcılar vakayı aynı anda görür — önceden kimse bilmez.
 4. Katılımcı ekranında 30 dakikalık geri sayım başlar; herkes kendi cevabını metin kutusuna yazar.
 5. Bir katılımcı "Cevabı Gönder"e bastığında ekranı "diğer katılımcıları bekliyoruz (X / Y cevapladı)" durumuna geçer.
-6. **Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda)** sistem otomatik olarak Gemini API'ye her cevabı gönderir, 4 kritere göre puanlar (0-25 puan x 4 = 100 puan) ve en yüksek puanı alanı o vakanın kazananı ilan eder (20.000 TL).
-7. Sonuçlar hem admin panelinde hem katılımcı ekranında canlı olarak belirir.
-8. Admin bir sonraki vaka için tekrar "Yeni Vaka İste ve Başlat" butonuna basar (7 vaka için 7 kez).
+6. **Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda)** — admin bir katılımcı sayılmaz, sadece gerçek katılımcılar beklenir — sistem otomatik olarak Gemini API'ye her cevabı gönderir, 4 kritere göre puanlar (0-25 puan x 4 = 100 puan) ve en yüksek puanı alanı o vakanın kazananı olarak belirler (20.000 TL).
+7. **Değerlendirme bitince sonuçlar önce sadece admin'e görünür** (cevaplar + puanlar + gerekçeler). Admin panelinde "📢 Sonuçları Katılımcılara Paylaş" butonu belirir; admin sonuçları inceler.
+8. Admin butona bastığında sonuçlar **tüm katılımcılara aynı anda** açılır — her katılımcı kendi puanını, gerekçesini ve diğer tüm katılımcıların cevap/puan/gerekçelerini görür. Amaç kişileri birbirine karşı yarıştırmak değil, Nietzsche'nin fikirlerine en yakın cevabı bulmak ve herkesin kendi eksiklerini görmesini sağlamaktır.
+9. Admin bir sonraki vaka için tekrar "Yeni Vaka İste ve Başlat" butonuna basar (7 vaka için 7 kez).
 
 ## 🚀 Kurulum
 
@@ -85,7 +86,10 @@ Railway, push sonrası otomatik olarak yeniden deploy eder. Environment variable
 Yeni bir vaka üretir (Gemini ile), Firestore'a yazar, yarışmayı başlatır. Sadece admin panelindeki buton çağırır.
 
 ### POST `/api/evaluate-round`
-Aktif vakanın tüm katılımcıları cevapladıysa (ya da süre dolduysa) cevapları Gemini ile değerlendirir, kazananı belirler. Katılımcı tarafında cevap gönderildiğinde ve süre dolduğunda otomatik çağrılır — çakışan çağrılara karşı sunucu tarafında kilitlenir (aynı vaka iki kez değerlendirilmez). Gemini'nin ücretsiz katman dakikalık istek sınırına takılırsa otomatik olarak kısa bekleyip yeniden dener.
+Aktif vakanın tüm katılımcıları (admin hariç) cevapladıysa ya da süre dolduysa cevapları Gemini ile değerlendirir, kazananı belirler ve oturum durumunu `reviewed` yapar (sonuçlar bu noktada sadece admin'e görünür, katılımcılara henüz açılmaz). Katılımcı tarafında cevap gönderildiğinde ve süre dolduğunda otomatik çağrılır — çakışan çağrılara karşı sunucu tarafında kilitlenir (aynı vaka iki kez değerlendirilmez). Gemini'nin ücretsiz katman dakikalık istek sınırına takılırsa otomatik olarak kısa bekleyip yeniden dener.
+
+### POST `/api/publish-results`
+Oturum durumu `reviewed` iken çağrılabilir; durumu `finished` yapar ve bu anda sonuçlar (cevaplar + puanlar + gerekçeler) tüm katılımcı ekranlarında aynı anda görünür hale gelir. Sadece admin panelindeki "Sonuçları Katılımcılara Paylaş" butonu çağırır.
 
 ### GET `/api/winners`
 Tüm vakaların kazananlarını ve toplam ödül tutarını döner.
