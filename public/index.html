@@ -626,6 +626,11 @@
                     Yapay Zekadan Yeni Vaka İste ve Yarışmayı Başlat
                 </button>
                 <p id="roundStatusAdmin" style="margin-top: 10px; color: #666; font-size: 13px;">Henüz bir vaka başlatılmadı.</p>
+
+                <div id="adminActiveCaseBox" style="display: none; margin-top: 18px;">
+                    <h4 style="color:#333; margin-bottom:10px;">📄 Aktif Vaka</h4>
+                    <div class="case-text" id="adminActiveCaseContent"></div>
+                </div>
             </div>
 
             <div class="case-container">
@@ -1641,6 +1646,7 @@
                 updateStartButtonState();
 
                 const box = document.getElementById('adminCaseBox');
+                const activeBox = document.getElementById('adminActiveCaseBox');
                 const statusEl = document.getElementById('roundStatusAdmin');
                 const currentAttemptStatusEl = document.getElementById('adminCurrentAttemptStatus');
                 const liveEl = document.getElementById('adminCurrentAttemptLive');
@@ -1648,6 +1654,7 @@
 
                 if (!data || !data.caseNumber) {
                     box.style.display = 'none';
+                    if (activeBox) activeBox.style.display = 'none';
                     statusEl.textContent = 'Henüz bir vaka başlatılmadı.';
                     if (currentAttemptStatusEl) currentAttemptStatusEl.textContent = 'Henüz bir vaka başlatılmadı.';
                     if (liveEl) liveEl.style.display = 'block';
@@ -1669,6 +1676,7 @@
                 // Yeni bir vaka başlatılana kadar bu nötr mesaj görünür.
                 if (data.status === 'finished') {
                     if (liveEl) liveEl.style.display = 'none';
+                    if (activeBox) activeBox.style.display = 'none';
                     if (finishedMsgEl) {
                         finishedMsgEl.style.display = 'block';
                         finishedMsgEl.textContent = `✓ Deneme - ${data.caseNumber} tamamlandı ve katılımcılara paylaşıldı. Aşağıdaki "Geçmiş Denemeler" listesinden görüntüleyebilirsin.`;
@@ -1697,9 +1705,13 @@
                 db.collection('cases').doc('current').get().then(caseDoc => {
                     if (caseDoc.exists && caseDoc.data().caseNumber === data.caseNumber) {
                         const c = caseDoc.data();
+                        const caseHtml = `<strong>Vaka #${data.caseNumber} — Tema: ${c.theme}</strong>${c.title ? ' — ' + c.title : ''}<br><br>${(c.content || '').replace(/\n/g, '<br>')}`;
                         box.style.display = 'block';
-                        document.getElementById('adminCaseContent').innerHTML =
-                            `<strong>Vaka #${data.caseNumber} — Tema: ${c.theme}</strong>${c.title ? ' — ' + c.title : ''}<br><br>${(c.content || '').replace(/\n/g, '<br>')}`;
+                        document.getElementById('adminCaseContent').innerHTML = caseHtml;
+                        if (activeBox) {
+                            activeBox.style.display = 'block';
+                            document.getElementById('adminActiveCaseContent').innerHTML = caseHtml;
+                        }
                     }
                 }).catch(err => addDebugLog("✗ case okuma hatası (admin): " + err.message));
             }, err => addDebugLog("✗ session dinleme hatası (admin): " + err.message));
