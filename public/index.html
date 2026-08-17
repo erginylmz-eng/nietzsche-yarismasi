@@ -367,7 +367,14 @@
             </div>
 
             <div class="case-container" id="adminResultsBox" style="display: none;">
-                <h3>🏆 Değerlendirme Sonuçları</h3>
+                <h3>🏆 Değerlendirme Sonuçları (şu an sadece sana görünüyor)</h3>
+                <p style="margin-bottom: 10px; color: #666; font-size: 13px;">
+                    Sonuçları incele. Hazır olduğunda aşağıdaki butona basarsan tüm cevaplar, puanlar ve gerekçeler
+                    tüm katılımcılara aynı anda açılır.
+                </p>
+                <button id="publishResultsBtn" onclick="publishResults()" style="display: none; background: #28a745;">
+                    📢 Sonuçları Katılımcılara Paylaş
+                </button>
                 <div id="adminResultsContainer"></div>
             </div>
         </div>
@@ -502,14 +509,10 @@
                 addDebugLog("✓ Google login başarılı: " + result.user.email);
 
                 const user = result.user;
-                await firebaseDB.collection('participants').doc(user.uid).set({
-                    name: user.displayName || 'Katılımcı',
-                    email: user.email,
-                    photoURL: user.photoURL,
-                    status: 'connected',
-                    connected_at: new Date()
-                }, { merge: true });
-
+                // NOT: participants koleksiyonuna yazma işlemi burada YAPILMAZ.
+                // Admin bir katılımcı değildir; bu yazma sadece setupParticipantScreen()
+                // içinde, gerçek katılımcılar için yapılır (aksi halde admin de
+                // "bağlı katılımcı" sayılıp sayımları bozuyordu).
                 setupSession(user);
             } catch (error) {
                 addDebugLog("✗ Giriş hatası: " + error.code + " - " + error.message);
@@ -593,8 +596,12 @@
                                 <span class="score">${e.evaluation?.total_score ?? 0} / 100</span>
                             </div>
                             ${i === 0 ? '<p style="color:#b8860b; font-weight:bold; margin-top:8px;">🏆 Bu vakanın kazananı — 20.000 TL</p>' : ''}
+                            <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Cevap:</strong></p>
+                            <p style="margin-top:2px; color:#333; font-size:13px; white-space:pre-wrap; background:#fff; padding:8px; border-radius:6px;">${(e.answer || '').replace(/</g, '&lt;')}</p>
+                            <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Nietzsche uygunluğu:</strong> ${e.evaluation?.criteria?.nietzsche_alignment ?? '-'} / 25 &nbsp;|&nbsp; <strong>Temel düşünceler:</strong> ${e.evaluation?.criteria?.fundamental_thoughts ?? '-'} / 25 &nbsp;|&nbsp; <strong>Mantıksal tutarlılık:</strong> ${e.evaluation?.criteria?.logical_consistency ?? '-'} / 25 &nbsp;|&nbsp; <strong>Kurumsal uygulanabilirlik:</strong> ${e.evaluation?.criteria?.institutional_applicability ?? '-'} / 25</p>
                             <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Güçlü yönler:</strong> ${e.evaluation?.strengths || '-'}</p>
                             <p style="margin-top:4px; color:#555; font-size:13px;"><strong>Eksiklikler:</strong> ${e.evaluation?.weaknesses || '-'}</p>
+                            <p style="margin-top:4px; color:#555; font-size:13px;"><strong>Genel değerlendirme:</strong> ${e.evaluation?.general_evaluation || '-'}</p>
                         </div>
                     `).join('');
                 }, err => addDebugLog("✗ evaluations dinleme hatası (" + key + "): " + err.message));
@@ -611,8 +618,10 @@
                 .onSnapshot(snapshot => {
                     const submitted = snapshot.size;
                     db.collection('participants').where('status', '==', 'connected').get().then(pSnap => {
+                        // Admin bir katılımcı değildir; sayıma dahil edilmez.
+                        const total = pSnap.docs.filter(d => d.data().email !== ADMIN_EMAIL).length;
                         const el = document.getElementById('waitingCount');
-                        if (el) el.textContent = `${submitted} / ${pSnap.size} katılımcı cevap verdi`;
+                        if (el) el.textContent = `${submitted} / ${total} katılımcı cevap verdi`;
                     });
                 }, err => addDebugLog("✗ waiting-count hatası: " + err.message));
         }
@@ -647,10 +656,13 @@
                 addDebugLog("participants güncellendi: " + snapshot.size + " kayıt");
                 const list = document.getElementById('participantsList');
                 list.innerHTML = '';
-                document.getElementById('participantCount').textContent = snapshot.size;
-                let allReady = snapshot.size > 0;
+                // Admin bir katılımcı değildir; listeden ve sayımdan hariç tutulur
+                // (eski test verisi kalmışsa dahi burada güvenlik ağı sağlar).
+                const docs = snapshot.docs.filter(d => d.data().email !== ADMIN_EMAIL);
+                document.getElementById('participantCount').textContent = docs.length;
+                let allReady = docs.length > 0;
 
-                snapshot.forEach(doc => {
+                docs.forEach(doc => {
                     const data = doc.data();
                     const card = document.createElement('div');
                     card.className = `participant-card ${data.status === 'connected' ? 'connected' : ''}`;
@@ -713,11 +725,25 @@
                 const statusLabels = {
                     started: 'devam ediyor',
                     evaluating: '🤖 yapay zeka değerlendiriyor',
-                    finished: '✓ tamamlandı'
+                    reviewed: '📝 değerlendirme hazır — incele ve paylaş',
+                    finished: '✓ tamamlandı ve katılımcılara paylaşıldı'
                 };
                 statusEl.textContent = `Vaka #${data.caseNumber} — ${statusLabels[data.status] || data.status}`;
 
-                watchResults(data.caseNumber, 'admin', 'adminResultsContainer', 'adminResultsBox', db);
+                const publishBtn = document.getElementById('publishResultsBtn');
+                if (publishBtn) {
+                    publishBtn.style.display = (data.status === 'reviewed') ? 'inline-block' : 'none';
+                    publishBtn.disabled = false;
+                    publishBtn.textContent = '📢 Sonuçları Katılımcılara Paylaş';
+                }
+
+                // Admin sonuçları 'reviewed' aşamasından itibaren görebilir
+                // (henüz katılımcılara açılmamış olsa bile).
+                if (data.status === 'reviewed' || data.status === 'finished') {
+                    watchResults(data.caseNumber, 'admin', 'adminResultsContainer', 'adminResultsBox', db);
+                } else {
+                    document.getElementById('adminResultsBox').style.display = 'none';
+                }
 
                 db.collection('cases').doc('current').get().then(caseDoc => {
                     if (caseDoc.exists && caseDoc.data().caseNumber === data.caseNumber) {
@@ -748,6 +774,28 @@
                 btn.disabled = false;
             } finally {
                 btn.textContent = originalText;
+            }
+        }
+
+        async function publishResults() {
+            const btn = document.getElementById('publishResultsBtn');
+            addDebugLog("▶ Sonuçlar paylaşılıyor...");
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = 'Paylaşılıyor...';
+            }
+            try {
+                const res = await fetch('/api/publish-results', { method: 'POST' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Bilinmeyen hata');
+                addDebugLog(`✓ Vaka #${data.caseNumber} sonuçları tüm katılımcılara paylaşıldı`);
+            } catch (err) {
+                addDebugLog("✗ Sonuç paylaşma hatası: " + err.message);
+                alert('Sonuçlar paylaşılamadı: ' + err.message);
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = '📢 Sonuçları Katılımcılara Paylaş';
+                }
             }
         }
 
@@ -789,7 +837,27 @@
                     startTimer(data.startTime, data.duration);
                     loadCase(db);
                     watchWaitingCount(data.caseNumber, db);
+                }
+
+                // Katılımcı sonuçları SADECE admin "Paylaş" butonuna basıp
+                // status 'finished' olduğunda görebilir — 'reviewed' aşamasında
+                // (henüz paylaşılmamışken) cevaplar/puanlar gizli kalır.
+                if (data.status === 'finished') {
                     watchResults(data.caseNumber, 'participant', 'participantResultsContainer', 'participantResultsBox', db);
+                } else {
+                    if (activeListeners['results_participant']) {
+                        activeListeners['results_participant']();
+                        activeListeners['results_participant'] = null;
+                    }
+                    const resultsBox = document.getElementById('participantResultsBox');
+                    if (resultsBox) resultsBox.style.display = 'none';
+                }
+
+                // Süre sadece round 'started' durumundayken işler; durum
+                // değiştiğinde (evaluating/reviewed/finished) hemen durdurulur.
+                if (data.status !== 'started' && timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
                 }
 
                 updateRoundStatusUI(data.status);
@@ -835,11 +903,12 @@
             const labels = {
                 started: '🕐 Süre devam ediyor',
                 evaluating: '🤖 Yapay zeka cevapları değerlendiriyor, lütfen bekleyin...',
+                reviewed: '📝 Değerlendirme tamamlandı — yönetici sonuçları inceliyor, birazdan paylaşılacak',
                 finished: '✓ Değerlendirme tamamlandı — sonuçlar aşağıda'
             };
             el.textContent = labels[status] || '';
 
-            if (status === 'evaluating' || status === 'finished') {
+            if (status === 'evaluating' || status === 'reviewed' || status === 'finished') {
                 document.getElementById('submitButton').disabled = true;
                 document.getElementById('answerTextarea').disabled = true;
             }
