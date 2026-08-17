@@ -464,24 +464,28 @@
                         <div id="adminCurrentAttempt">
                             <p id="adminCurrentAttemptStatus" style="color: #666; font-size: 13px; margin-bottom: 15px;">Henüz bir vaka başlatılmadı.</p>
 
-                            <div id="adminCaseBox" style="display: none;">
-                                <h4 style="color:#333; margin-bottom:10px;">Aktif Vaka</h4>
-                                <div class="case-text" id="adminCaseContent"></div>
-                            </div>
+                            <p id="adminCurrentAttemptFinishedMsg" style="display: none; color: #28a745; font-weight: bold; font-size: 14px; margin-bottom: 15px;"></p>
 
-                            <h4 style="color:#333; margin: 20px 0 10px;">Gelen Cevaplar (<span id="responseCount">0</span>)</h4>
-                            <div id="responsesList"></div>
+                            <div id="adminCurrentAttemptLive">
+                                <div id="adminCaseBox" style="display: none;">
+                                    <h4 style="color:#333; margin-bottom:10px;">Aktif Vaka</h4>
+                                    <div class="case-text" id="adminCaseContent"></div>
+                                </div>
 
-                            <div id="adminResultsBox" style="display: none; margin-top: 20px;">
-                                <h4 style="color:#333; margin-bottom:10px;">🏆 Değerlendirme Sonuçları (şu an sadece sana görünüyor)</h4>
-                                <p style="margin-bottom: 10px; color: #666; font-size: 13px;">
-                                    Sonuçları incele. Hazır olduğunda aşağıdaki butona basarsan tüm cevaplar, puanlar ve gerekçeler
-                                    tüm katılımcılara aynı anda açılır.
-                                </p>
-                                <button id="publishResultsBtn" onclick="publishResults()" style="display: none; background: #28a745;">
-                                    📢 Sonuçları Katılımcılara Paylaş
-                                </button>
-                                <div id="adminResultsContainer"></div>
+                                <h4 style="color:#333; margin: 20px 0 10px;">Gelen Cevaplar (<span id="responseCount">0</span>)</h4>
+                                <div id="responsesList"></div>
+
+                                <div id="adminResultsBox" style="display: none; margin-top: 20px;">
+                                    <h4 style="color:#333; margin-bottom:10px;">🏆 Değerlendirme Sonuçları (şu an sadece sana görünüyor)</h4>
+                                    <p style="margin-bottom: 10px; color: #666; font-size: 13px;">
+                                        Sonuçları incele. Hazır olduğunda aşağıdaki butona basarsan tüm cevaplar, puanlar ve gerekçeler
+                                        tüm katılımcılara aynı anda açılır.
+                                    </p>
+                                    <button id="publishResultsBtn" onclick="publishResults()" style="display: none; background: #28a745;">
+                                        📢 Sonuçları Katılımcılara Paylaş
+                                    </button>
+                                    <div id="adminResultsContainer"></div>
+                                </div>
                             </div>
                         </div>
 
@@ -527,7 +531,7 @@
             <div class="user-info" id="participantUserInfo"></div>
 
             <div id="waitingArea" class="waiting-message">
-                <p>⏳ Yönetici yarışmayı başlatmayı bekliyor...</p>
+                <p id="waitingAreaText">⏳ Yönetici yarışmayı başlatmayı bekliyor...</p>
             </div>
 
             <div id="competitionArea" style="display: none;">
@@ -547,11 +551,6 @@
                 <div class="submitted-message" id="submittedMessage">
                     <h3>✓ Cevabınız Gönderildi</h3>
                     <p id="waitingCount">Diğer katılımcıların cevaplarını bekliyoruz...</p>
-                </div>
-
-                <div class="case-container" id="participantResultsBox" style="display: none;">
-                    <h3>🏆 Değerlendirme Sonuçları</h3>
-                    <div id="participantResultsContainer"></div>
                 </div>
             </div>
 
@@ -1114,11 +1113,15 @@
                 const box = document.getElementById('adminCaseBox');
                 const statusEl = document.getElementById('roundStatusAdmin');
                 const currentAttemptStatusEl = document.getElementById('adminCurrentAttemptStatus');
+                const liveEl = document.getElementById('adminCurrentAttemptLive');
+                const finishedMsgEl = document.getElementById('adminCurrentAttemptFinishedMsg');
 
                 if (!data || !data.caseNumber) {
                     box.style.display = 'none';
                     statusEl.textContent = 'Henüz bir vaka başlatılmadı.';
                     if (currentAttemptStatusEl) currentAttemptStatusEl.textContent = 'Henüz bir vaka başlatılmadı.';
+                    if (liveEl) liveEl.style.display = 'block';
+                    if (finishedMsgEl) finishedMsgEl.style.display = 'none';
                     return;
                 }
 
@@ -1131,6 +1134,21 @@
                 statusEl.textContent = `Vaka #${data.caseNumber} — ${statusLabels[data.status] || data.status}`;
                 if (currentAttemptStatusEl) currentAttemptStatusEl.textContent = `Deneme - ${data.caseNumber} — ${statusLabels[data.status] || data.status}`;
 
+                // Sonuçlar paylaşıldığında (status: finished) bu deneme artık
+                // "canlı" görünümden çıkar — sadece Geçmiş Denemeler'den izlenir.
+                // Yeni bir vaka başlatılana kadar bu nötr mesaj görünür.
+                if (data.status === 'finished') {
+                    if (liveEl) liveEl.style.display = 'none';
+                    if (finishedMsgEl) {
+                        finishedMsgEl.style.display = 'block';
+                        finishedMsgEl.textContent = `✓ Deneme - ${data.caseNumber} tamamlandı ve katılımcılara paylaşıldı. Aşağıdaki "Geçmiş Denemeler" listesinden görüntüleyebilirsin.`;
+                    }
+                    return;
+                }
+
+                if (liveEl) liveEl.style.display = 'block';
+                if (finishedMsgEl) finishedMsgEl.style.display = 'none';
+
                 const publishBtn = document.getElementById('publishResultsBtn');
                 if (publishBtn) {
                     publishBtn.style.display = (data.status === 'reviewed') ? 'inline-block' : 'none';
@@ -1140,7 +1158,7 @@
 
                 // Admin sonuçları 'reviewed' aşamasından itibaren görebilir
                 // (henüz katılımcılara açılmamış olsa bile).
-                if (data.status === 'reviewed' || data.status === 'finished') {
+                if (data.status === 'reviewed') {
                     watchResults(data.caseNumber, 'admin', 'adminResultsContainer', 'adminResultsBox', db);
                 } else {
                     document.getElementById('adminResultsBox').style.display = 'none';
@@ -1227,10 +1245,32 @@
 
                 const currentAttemptSummaryEl = document.getElementById('participantCurrentAttemptSummary');
 
-                if (!data || !data.caseNumber) {
-                    document.getElementById('waitingArea').style.display = 'block';
+                // Görüntülenecek "canlı" bir deneme yoksa (hiç başlamadıysa YA DA
+                // admin sonuçları paylaşıp tamamlandıysa) ana ekran nötr duruma
+                // döner ve süre/temayı kesin olarak durdurur. Tamamlanan deneme
+                // artık sadece "Geçmiş Denemeler" listesinden görüntülenir.
+                if (!data || !data.caseNumber || data.status === 'finished') {
+                    if (timerInterval) {
+                        clearInterval(timerInterval);
+                        timerInterval = null;
+                    }
+                    activeCaseNumber = null;
+                    if (activeListeners['waiting_count']) {
+                        activeListeners['waiting_count']();
+                        activeListeners['waiting_count'] = null;
+                    }
+
                     document.getElementById('competitionArea').style.display = 'none';
-                    if (currentAttemptSummaryEl) currentAttemptSummaryEl.textContent = 'Şu an aktif bir deneme yok.';
+                    document.getElementById('waitingArea').style.display = 'block';
+
+                    const waitingText = document.getElementById('waitingAreaText');
+                    if (data && data.status === 'finished') {
+                        if (waitingText) waitingText.textContent = `✓ Deneme - ${data.caseNumber} tamamlandı ve paylaşıldı. Sonuçları "📚 Denemeler" bölümündeki "Geçmiş Denemeler" listesinden görebilirsin.`;
+                        if (currentAttemptSummaryEl) currentAttemptSummaryEl.textContent = `Deneme - ${data.caseNumber} tamamlandı (Geçmiş Denemeler'de görüntülenebilir).`;
+                    } else {
+                        if (waitingText) waitingText.textContent = '⏳ Yönetici yarışmayı başlatmayı bekliyor...';
+                        if (currentAttemptSummaryEl) currentAttemptSummaryEl.textContent = 'Şu an aktif bir deneme yok.';
+                    }
                     return;
                 }
 
@@ -1241,8 +1281,7 @@
                     const summaryLabels = {
                         started: 'devam ediyor',
                         evaluating: 'yapay zeka değerlendiriyor',
-                        reviewed: 'değerlendirme tamamlandı, yönetici paylaşımı bekleniyor',
-                        finished: 'tamamlandı ve paylaşıldı'
+                        reviewed: 'değerlendirme tamamlandı, yönetici paylaşımı bekleniyor'
                     };
                     currentAttemptSummaryEl.textContent = `Deneme - ${data.caseNumber} — ${summaryLabels[data.status] || data.status} (yukarıdaki alanda görüntülenir)`;
                 }
@@ -1251,28 +1290,18 @@
                     addDebugLog("✓ Yeni vaka algılandı (#" + data.caseNumber + ")");
                     activeCaseNumber = data.caseNumber;
                     await restoreOrResetParticipantUI(db, user, data.caseNumber);
-                    startTimer(data.startTime, data.duration);
                     loadCase(db);
                     watchWaitingCount(data.caseNumber, db);
                 }
 
-                // Katılımcı sonuçları SADECE admin "Paylaş" butonuna basıp
-                // status 'finished' olduğunda görebilir — 'reviewed' aşamasında
-                // (henüz paylaşılmamışken) cevaplar/puanlar gizli kalır.
-                if (data.status === 'finished') {
-                    watchResults(data.caseNumber, 'participant', 'participantResultsContainer', 'participantResultsBox', db);
-                } else {
-                    if (activeListeners['results_participant']) {
-                        activeListeners['results_participant']();
-                        activeListeners['results_participant'] = null;
-                    }
-                    const resultsBox = document.getElementById('participantResultsBox');
-                    if (resultsBox) resultsBox.style.display = 'none';
-                }
-
-                // Süre sadece round 'started' durumundayken işler; durum
-                // değiştiğinde (evaluating/reviewed/finished) hemen durdurulur.
-                if (data.status !== 'started' && timerInterval) {
+                // Süre SADECE status 'started' olduğunda çalışmalı; bu her
+                // snapshot'ta yeniden kontrol edilen bir kural (tek seferlik bir
+                // bayrağa değil, doğrudan mevcut duruma dayanır), böylece bir
+                // sayfa yenilemesi ya da gecikmiş bir güncelleme asla eskimiş
+                // (stale) bir süreyi arka planda çalışır bırakamaz.
+                if (data.status === 'started') {
+                    if (!timerInterval) startTimer(data.startTime, data.duration);
+                } else if (timerInterval) {
                     clearInterval(timerInterval);
                     timerInterval = null;
                 }
