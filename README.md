@@ -144,7 +144,7 @@ Sayfanın en altındaki siyah/yeşil **Sistem Günlüğü** kutusu her ekranda (
 
 ### Vaka görünmüyor / yarışma başlamıyor
 - Admin panelindeki Sistem Günlüğü'nde "Vaka başlatma hatası" var mı bak
-- Kayıtlı katılımcıların **hepsinin** o an "Bağlı" (çevrimiçi) görünmesi gerekir — biri bile "Bağlı Değil" ise buton pasif kalır; gerekirse çevrimdışı görüneni "Çıkar" ile listeden kaldır
+- En az 1 katılımcının o an "Bağlı" (çevrimiçi) görünmesi gerekir (buton aksi halde pasif kalır) — hiç kimse bağlı değilse, ilgili katılımcının sayfayı açıp beklemesini iste
 
 ## 📧 İletişim
 
