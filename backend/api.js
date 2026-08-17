@@ -130,6 +130,10 @@ ${response.answer}
 3. Mantıksal Tutarlılık
 4. Kurumsal/Pratik Uygulanabilirlik
 
+Değerlendirmeni İKİ ayrı bölüm halinde sun:
+1. KAZANIMLAR: Cevabın puan kazandığı, güçlü olduğu noktalar.
+2. HATALAR: Puanın nereden ve NEDEN kırıldığı — hangi kriterde, hangi eksiklik/yanlış anlama yüzünden puan kaybedildiği somut örneklerle. Ayrıca bu kişiye özel, hangi konuya/kavrama odaklanarak kendini geliştirmesi gerektiğine dair kısa bir tavsiye ver.
+
 SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama ekleme, markdown code fence kullanma:
 {
   "total_score": 0,
@@ -139,8 +143,9 @@ SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama eklem
     "logical_consistency": 0,
     "institutional_applicability": 0
   },
-  "strengths": "Güçlü yönler, kısa ve öz (1-2 cümle)",
-  "weaknesses": "Eksiklikler, kısa ve öz (1-2 cümle)",
+  "strengths": "KAZANIMLAR: Puan kazandıran güçlü yönler, somut (2-3 cümle)",
+  "weaknesses": "HATALAR: Puanın nereden ve neden kırıldığı, hangi kriterde ne eksikti, somut (2-3 cümle)",
+  "improvement_advice": "Bu kişiye özel gelişim önerisi: hangi konuya/kavrama odaklanarak kendini geliştirmeli (2-3 cümle)",
   "general_evaluation": "Genel değerlendirme (2-3 cümle)"
 }`;
 
@@ -159,8 +164,13 @@ SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama eklem
             criteria: {},
             strengths: '',
             weaknesses: '',
+            improvement_advice: '',
             general_evaluation: text || 'Değerlendirme ayrıştırılamadı.'
         };
+    }
+
+    if (typeof evaluation.improvement_advice !== 'string') {
+        evaluation.improvement_advice = '';
     }
 
     return evaluation;
@@ -319,6 +329,22 @@ app.post('/api/publish-results', async (req, res) => {
         }
 
         await sessionRef.update({ status: 'finished' });
+
+        // Vakayı kalıcı olarak "yayınlandı" işaretle — session/current bir sonraki
+        // vaka başladığında üzerine yazılacağı için, "Geçmiş Denemeler" listesinin
+        // hangi vakaların gerçekten paylaşıldığını bilmesi için bu işaret cases
+        // koleksiyonunda kalıcı olarak saklanır.
+        const batch = db.batch();
+        batch.set(db.collection('cases').doc('case_' + session.caseNumber), {
+            published: true,
+            publishedAt: FieldValue.serverTimestamp()
+        }, { merge: true });
+        batch.set(db.collection('cases').doc('current'), {
+            published: true,
+            publishedAt: FieldValue.serverTimestamp()
+        }, { merge: true });
+        await batch.commit();
+
         console.log(`✓ Vaka #${session.caseNumber} sonuçları katılımcılara yayınlandı`);
         res.json({ success: true, caseNumber: session.caseNumber });
     } catch (error) {
