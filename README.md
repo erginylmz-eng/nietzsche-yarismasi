@@ -8,7 +8,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 - **🚫 Beyaz Liste Erişim Kontrolü**: Sadece yönetici + belirlenen 3 katılımcının e-postası platforma girebilir. Listede olmayan bir hesap giriş yapmaya çalıştığında oturumu anında kapatılır ve "ÇOK ŞANSSIZSINIZ! Friedrich Wilhelm Nietzsche Çalışma Grubu'nda olmadığınız için bu platforma erişemezsiniz" mesajı gösterilir. Aynı kısıtlama Firestore güvenlik kurallarında da uygulanır (tarayıcı konsolundan doğrudan erişim denemeleri de engellenir)
 - **👀 Canlı Katılımcı Paneli**: Yönetici, kayıt olan katılımcıları anlık görür
 - **🟢 Gerçek Zamanlı Çevrimiçi Durumu**: Katılımcı sekmesi açıkken her 15 saniyede bir "hâlâ buradayım" sinyali (heartbeat) gönderir. Admin panelindeki "Bağlı / Bağlı Değil" rozeti bu sinyale göre canlı hesaplanır — biri sekmesini kapatır ya da bağlantısını kaybederse ~40 saniye içinde otomatik olarak "Bağlı Değil" görünür, elle "Çıkar"a gerek kalmaz. Not: bir tur zaten başladıktan sonra "kaç kişi cevap vermesi bekleniyor" sayımı hâlâ ilk bağlanma anındaki kayda dayanır — turu ortasında sessizce ayrılan biri o turdan çıkarmak isterseniz yine elle "Çıkar" kullanmanız gerekir
-- **🤖 AI-Destekli Vaka Üretimi**: Yarışma başlatıldığı anda Gemini API, önceden kimsenin bilmediği bir vaka üretir — yönetici de dahil herkes vakayı aynı anda görür
+- **🤖 AI-Destekli Vaka Üretimi**: Yarışma başlatıldığı anda Gemini API, önceden kimsenin bilmediği bir vaka üretir — yönetici de dahil herkes vakayı aynı anda görür. Yapay zeka, "30 yıllık birikime sahip bir lojistik şirketinde yönetim kurulu başkanı" rolünü üstlenerek kendi şirketinin karşılaştığı gerçekçi bir yönetim ikilemini (otomasyon, ekip küçültme, maliyet kısma vb.) anlatır ve sonunda 2-3 alt sorudan oluşan bir karar sorusu sorar — vaka hiçbir felsefi isim/kavram içermez, katılımcı Nietzsche'nin bakış açısını kendi başına uygulamak zorundadır
 - **⏱️ Real-time Timer**: 30 dakikalık çalışma süresi, sayfa yenilense bile doğru kalır
 - **⏳ Bekleme Ekranı**: Bir katılımcı cevabını gönderdiğinde diğerlerinin bitirmesini bekler
 - **📊 Otomatik Değerlendirme**: Tüm katılımcılar cevaplayınca (veya süre dolunca) Gemini AI otomatik olarak puanlar
@@ -28,7 +28,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 3. Sunucu (backend), Gemini API'yi çağırarak o an, özgün bir vaka üretir ve Firestore'a yazar. Bu an itibarıyla hem admin hem tüm katılımcılar vakayı aynı anda görür — önceden kimse bilmez.
 4. Katılımcı ekranında 30 dakikalık geri sayım başlar; herkes kendi cevabını metin kutusuna yazar.
 5. Bir katılımcı "Cevabı Gönder"e bastığında ekranı "diğer katılımcıları bekliyoruz (X / Y cevapladı)" durumuna geçer.
-6. **Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda)** — admin bir katılımcı sayılmaz, sadece gerçek katılımcılar beklenir — sistem otomatik olarak Gemini API'ye her cevabı gönderir, 4 kritere göre puanlar (0-25 puan x 4 = 100 puan) ve en yüksek puanı alanı o vakanın kazananı olarak belirler (20.000 TL).
+6. **Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda)** — admin bir katılımcı sayılmaz, sadece gerçek katılımcılar beklenir — sistem otomatik olarak Gemini API'ye her cevabı gönderir, 5 kritere göre ağırlıklı puanlar (toplam 100 puan) ve en yüksek puanı alanı o vakanın kazananı olarak belirler (20.000 TL).
 7. **Değerlendirme bitince sonuçlar önce sadece admin'e görünür** (cevaplar + puanlar + gerekçeler). Admin panelinde "📢 Sonuçları Katılımcılara Paylaş" butonu belirir; admin sonuçları inceler.
 8. Admin butona bastığında sonuçlar **tüm katılımcılara aynı anda** açılır — her katılımcı kendi puanını, gerekçesini ve diğer tüm katılımcıların cevap/puan/gerekçelerini görür. Amaç kişileri birbirine karşı yarıştırmak değil, Nietzsche'nin fikirlerine en yakın cevabı bulmak ve herkesin kendi eksiklerini görmesini sağlamaktır.
 9. Admin bir sonraki vaka için tekrar "Yeni Vaka İste ve Başlat" butonuna basar (7 vaka için 7 kez).
@@ -115,10 +115,11 @@ Tüm vakaların kazananlarını ve toplam ödül tutarını döner.
 
 ## 📝 Değerlendirme Kriterleri
 
-1. **Nietzsche Felsefesine Uygunluk** (0-25 puan)
-2. **Temel Düşünceleri Doğru Temsil** (0-25 puan)
-3. **Mantıksal Tutarlılık** (0-25 puan)
-4. **Kurumsal Uygulanabilirlik** (0-25 puan)
+1. **Filozofun Bakış Açısına Sadakat** (0-30 puan)
+2. **Mantıksal Tutarlılık** (0-20 puan)
+3. **Vakaya Uygunluk** (0-20 puan)
+4. **İkna Gücü ve Retorik Yetkinlik** (0-15 puan)
+5. **Kurumsal Uygulanabilirlik** (0-15 puan)
 
 ## 🏆 Ödüllendirme
 
