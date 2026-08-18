@@ -95,16 +95,24 @@ async function pickTheme() {
 async function generateCaseWithAI() {
     const theme = await pickTheme();
 
-    const prompt = `Sen bir kurumsal etik danışmanısın. "${theme}" teması çerçevesinde gerçekçi, özgün bir kurumsal vaka yaz. Bu vaka, katılımcıların cevapları daha sonra ayrı ve gizli bir değerlendirme aşamasında bir felsefi çerçeveye göre puanlanacak — ama bu ÇERÇEVE VAKANIN İÇİNDE ASLA BELİRTİLMEMELİ. Katılımcının hangi düşünce sistemini uygulayacağını kendi başına, dışarıdan hiçbir ipucu almadan bulması gerekiyor; vaka metninde herhangi bir felsefi yönlendirme veya ipucu olursa bu katılımcıyı yönlendirir ve değerlendirmeyi anlamsızlaştırır.
+    const prompt = `Sen, 30 yıllık birikime sahip, bir lojistik şirketinde yönetim kurulu başkanısın. "${theme}" ekseninde, kendi şirketinin karşılaştığı gerçekçi, özgün bir yönetim ikilemini vaka olarak anlat. Bu vaka, katılımcıların cevapları daha sonra ayrı ve gizli bir değerlendirme aşamasında bir felsefi çerçeveye göre puanlanacak — ama bu ÇERÇEVE VAKANIN İÇİNDE ASLA BELİRTİLMEMELİ. Katılımcının hangi düşünce sistemini uygulayacağını kendi başına, dışarıdan hiçbir ipucu almadan bulması gerekiyor; vaka metninde herhangi bir felsefi yönlendirme veya ipucu olursa bu katılımcıyı yönlendirir ve değerlendirmeyi anlamsızlaştırır.
+
+Örnek vaka (tarz, uzunluk ve soru yapısını referans al — konusunu birebir kopyalama, her seferinde farklı bir yönetim kararı anlat):
+
+"Şirket, depo operasyonlarında verimliliği artırmak amacıyla yapay zekâ destekli bir planlama sistemine geçmeye karar vermiştir. Yeni sistem sayesinde raporlama, vardiya planlama ve sipariş analizleri otomatik olarak gerçekleştirilebilecektir. Bu dönüşüm sonucunda 10 kişilik ekibin iş yükü önemli ölçüde azalacak, ancak yapılan değerlendirmelere göre 3 pozisyona artık ihtiyaç duyulmayacaktır.
+
+SORU: Bu durumda yapay zekâ sistemini uygulamaya alır mıydınız? İşini kaybetme riski bulunan çalışanlar için nasıl bir yol izlerdiniz? Teknolojik gelişim ile çalışanlara karşı etik sorumluluk arasında nasıl bir denge kurulması gerektiğini gerekçeleriyle açıklayınız."
 
 Vaka şunları içermeli:
-1. Gerçekçi bir kurumsal/organizasyonel durum
-2. Etik bir ikilem veya çatışma — birden fazla makul bakış açısına açık, tek doğru cevabı olmayan bir durum
+1. Bu lojistik şirketinde geçen, gerçekçi ve somut bir operasyonel/yönetimsel durum (otomasyon, ekip küçültme, maliyet kısma, tedarikçi/müşteri ilişkileri, dış kaynak kullanımı, performans yönetimi vb. olabilir)
+2. Bir gelişme/verimlilik adımı ile bundan etkilenen kişiler (çalışanlar, tedarikçiler, müşteriler) arasındaki gerilim — birden fazla makul bakış açısına açık, tek doğru cevabı olmayan bir durum
 3. Karar alınması gereken somut bir nokta
 
-Vaka 250-400 kelime uzunluğunda, akıcı bir anlatı olarak yazılsın (madde işareti kullanma, düz metin). ASLA hiçbir filozofun adını, felsefi akımı, kavramı veya terimini (örneğin güç istenci, köle/efendi ahlakı, değerlerin yeniden değerlendirilmesi gibi) kullanma veya ima etme — vaka sade, nötr bir iş/organizasyon anlatısı olmalı. Vakanın sonunda katılımcıya yöneltilen açık ve nötr bir karar sorusu olsun — sadece şu kalıba benzer bir şey: "Bu durumda yönetici olarak ne karar verirdiniz? Kararınızı ve gerekçenizi açıklayın." Bu soruda da hiçbir felsefi referans, isim veya kavram GEÇMEMELİ.
+Vaka 80-150 kelime uzunluğunda, akıcı bir anlatı olarak yazılsın (madde işareti kullanma, düz metin, örnekteki gibi kısa ve öz). ASLA hiçbir filozofun adını, felsefi akımı, kavramı veya terimini (örneğin güç istenci, köle/efendi ahlakı, değerlerin yeniden değerlendirilmesi gibi) kullanma veya ima etme — vaka sade, nötr bir iş/organizasyon anlatısı olmalı.
 
-Sadece vakanın kendisini yaz, başka açıklama ekleme. İlk satırda kısa, çarpıcı bir başlık olsun (örn: "Terfi Kararı"), sonrasında vaka metni gelsin.`;
+Vakanın sonunda "SORU:" ile başlayan, örnekteki gibi 2-3 alt sorudan oluşan nötr bir karar sorusu bloğu olsun: (a) katılımcının bu durumda ne karar vereceğini sorar, (b) etkilenen kişiler için nasıl bir yol izleyeceğini sorar, (c) rekabet eden değerler arasında (ör. verimlilik/gelişim ile insanlara karşı sorumluluk) nasıl bir denge kurulması gerektiğini gerekçeleriyle sorar. Bu soru bloğunda da hiçbir felsefi referans, isim veya kavram GEÇMEMELİ.
+
+Sadece vakanın kendisini yaz, başka açıklama ekleme. İlk satırda kısa, çarpıcı bir başlık olsun (örn: "Depo Otomasyonu Kararı"), sonrasında vaka metni ve SORU bloğu gelsin.`;
 
     // Güvenlik ağı: yapay zeka talimata rağmen yine de bir felsefi isim/kavram
     // sızdırırsa (ör. "Nietzsche", "güç istenci") vakayı katılımcılara yönlendirici
@@ -147,11 +155,12 @@ ${caseData.title ? caseData.title + '\n' : ''}${caseData.content}
 KATILIMCININ CEVABI:
 ${response.answer}
 
-Şu 4 kritere göre değerlendir (her biri 0-25 puan, toplam 0-100):
-1. Nietzsche Felsefesine Uygunluk
-2. Temel Düşünceleri Doğru Temsil Etme
-3. Mantıksal Tutarlılık
-4. Kurumsal/Pratik Uygulanabilirlik
+Şu 5 kritere göre, belirtilen ağırlıklarla değerlendir (toplam 0-100):
+1. Filozofun Bakış Açısına Sadakat (0-30 puan) — cevap Nietzsche'nin felsefesini ne kadar doğru ve sadık şekilde yansıtıyor
+2. Mantıksal Tutarlılık (0-20 puan) — argüman iç tutarlı mı, çelişki içeriyor mu
+3. Vakaya Uygunluk (0-20 puan) — cevap somut vakaya gerçekten değiniyor mu, yoksa genel geçer/ezber bir anlatı mı
+4. İkna Gücü ve Retorik Yetkinlik (0-15 puan) — argümantasyon ne kadar ikna edici ve iyi kurgulanmış
+5. Kurumsal Uygulanabilirlik (0-15 puan) — önerilen yaklaşım gerçek bir şirkette ne kadar uygulanabilir
 
 Değerlendirmeni İKİ ayrı bölüm halinde sun:
 1. KAZANIMLAR: Cevabın puan kazandığı, güçlü olduğu noktalar.
@@ -161,9 +170,10 @@ SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama eklem
 {
   "total_score": 0,
   "criteria": {
-    "nietzsche_alignment": 0,
-    "fundamental_thoughts": 0,
+    "philosopher_fidelity": 0,
     "logical_consistency": 0,
+    "case_relevance": 0,
+    "persuasive_rhetoric": 0,
     "institutional_applicability": 0
   },
   "strengths": "KAZANIMLAR: Puan kazandıran güçlü yönler, somut (2-3 cümle)",
