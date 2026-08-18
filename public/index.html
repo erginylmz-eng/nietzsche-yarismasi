@@ -1104,7 +1104,7 @@
                     ${i === 0 ? '<p style="color:#a9822e; font-weight:bold; margin-top:8px;">🏆 Bu vakanın kazananı — 20.000 TL</p>' : ''}
                     <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Cevap:</strong></p>
                     <p style="margin-top:2px; color:#333; font-size:13px; white-space:pre-wrap; background:#fff; padding:8px; border-radius:6px;">${(e.answer || '').replace(/</g, '&lt;')}</p>
-                    <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Nietzsche uygunluğu:</strong> ${e.evaluation?.criteria?.nietzsche_alignment ?? '-'} / 25 &nbsp;|&nbsp; <strong>Temel düşünceler:</strong> ${e.evaluation?.criteria?.fundamental_thoughts ?? '-'} / 25 &nbsp;|&nbsp; <strong>Mantıksal tutarlılık:</strong> ${e.evaluation?.criteria?.logical_consistency ?? '-'} / 25 &nbsp;|&nbsp; <strong>Kurumsal uygulanabilirlik:</strong> ${e.evaluation?.criteria?.institutional_applicability ?? '-'} / 25</p>
+                    <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Filozofun Bakış Açısına Sadakat:</strong> ${e.evaluation?.criteria?.philosopher_fidelity ?? '-'} / 30 &nbsp;|&nbsp; <strong>Mantıksal Tutarlılık:</strong> ${e.evaluation?.criteria?.logical_consistency ?? '-'} / 20 &nbsp;|&nbsp; <strong>Vakaya Uygunluk:</strong> ${e.evaluation?.criteria?.case_relevance ?? '-'} / 20 &nbsp;|&nbsp; <strong>İkna Gücü ve Retorik Yetkinlik:</strong> ${e.evaluation?.criteria?.persuasive_rhetoric ?? '-'} / 15 &nbsp;|&nbsp; <strong>Kurumsal Uygulanabilirlik:</strong> ${e.evaluation?.criteria?.institutional_applicability ?? '-'} / 15</p>
                     <div class="gains-box">
                         <strong>✅ Kazanımlar</strong>
                         <p style="margin-top:4px; color:#333; font-size:13px;">${e.evaluation?.strengths || '-'}</p>
@@ -1727,7 +1727,10 @@
             list.innerHTML = '';
             const docs = adminParticipantsDocsCache;
             document.getElementById('participantCount').textContent = docs.length;
-            let allReady = docs.length > 0;
+            // Yarışmayı başlatmak için TÜM kayıtlı katılımcıların değil, EN AZ
+            // BİRİNİN o an bağlı olması yeterli — canlı bir etkinlikte herkesin
+            // aynı anda ekran başında olmasını beklemek gerçekçi değil.
+            let anyOnline = false;
 
             docs.forEach(doc => {
                 const data = doc.data();
@@ -1746,10 +1749,10 @@
                     </span>
                 `;
                 list.appendChild(card);
-                if (!online) allReady = false;
+                if (online) anyOnline = true;
             });
 
-            participantsReady = allReady;
+            participantsReady = anyOnline;
             updateStartButtonState();
         }
 
