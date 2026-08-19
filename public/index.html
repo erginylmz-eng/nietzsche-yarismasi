@@ -485,6 +485,31 @@
             margin-bottom: 8px;
         }
 
+        /* GEÇMİŞ DENEMELER: VAKAYA VERİLEBİLECEK EN İYİ CEVAP (yapay zeka örneği) */
+        .ideal-answer-box {
+            margin-bottom: 15px;
+            padding: 14px 16px;
+            background: #fdf6e6;
+            border-radius: 8px;
+            border-left: 4px solid #c99a3e;
+        }
+
+        .ideal-answer-box .ideal-title {
+            font-weight: bold;
+            color: #a9822e;
+            margin-bottom: 4px;
+        }
+
+        .ideal-answer-box .ideal-text {
+            margin-top: 4px;
+            color: #333;
+            font-size: 13px;
+            white-space: pre-wrap;
+            background: #fff;
+            padding: 8px;
+            border-radius: 6px;
+        }
+
         /* EĞİTİMLER */
         .training-card {
             background: #f8f9fa;
@@ -1134,6 +1159,23 @@
             `;
         }
 
+        // Bir vakaya verilebilecek en iyi cevabı (yapay zeka örneği) ve bu cevabın
+        // neden 100 puan aldığının açıklamasını HTML'e çevirir. Bu bilgi backend
+        // tarafından sadece değerlendirme sırasında üretilip vaka kaydına yazılır ve
+        // sadece "Geçmiş Denemeler" listesinde, o deneme paylaşıldıktan (published)
+        // sonra görünür — vaka aktif sorulurken hiçbir yerde gösterilmez.
+        function renderIdealAnswerBox(c) {
+            if (!c || !c.idealAnswer) return '';
+            return `
+                <div class="ideal-answer-box">
+                    <p class="ideal-title">🏆 Bu Vakaya Verilebilecek En İyi Cevap (Yapay Zeka Örneği)</p>
+                    <p class="ideal-text">${(c.idealAnswer || '').replace(/</g, '&lt;')}</p>
+                    <p class="ideal-title" style="margin-top:12px;">💯 Bu Cevap Neden 100 Puan Alır?</p>
+                    <p class="ideal-text">${(c.idealAnswerExplanation || '').replace(/</g, '&lt;')}</p>
+                </div>
+            `;
+        }
+
         // Bir vakanın tüm katılımcı sonuçlarını (cevap + puan + kazanım/hata) HTML'e çevirir.
         // Hem canlı sonuç kutusunda (watchResults) hem de Geçmiş Denemeler detayında kullanılır.
         function buildResultCardsHTML(evals) {
@@ -1257,6 +1299,7 @@
                         <strong>Tema: ${c.theme || '-'}</strong>${c.title ? ' — ' + c.title : ''}<br><br>
                         ${(c.content || '').replace(/\n/g, '<br>')}
                     </div>
+                    ${renderIdealAnswerBox(c)}
                     ${buildResultCardsHTML(evals)}
                 `;
             } catch (err) {
