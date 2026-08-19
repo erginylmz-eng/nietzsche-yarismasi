@@ -209,6 +209,65 @@ SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama eklem
     return evaluation;
 }
 
+// Kriter anahtarlarının okunabilir adları ve azami puanları (bkz. evaluateResponseWithAI).
+const CRITERIA_LABELS = {
+    philosopher_fidelity: 'Filozofun Bakış Açısına Sadakat',
+    logical_consistency: 'Mantıksal Tutarlılık',
+    case_relevance: 'Vakaya Uygunluk',
+    persuasive_rhetoric: 'İkna Gücü ve Retorik Yetkinlik',
+    institutional_applicability: 'Kurumsal Uygulanabilirlik'
+};
+const CRITERIA_MAX = {
+    philosopher_fidelity: 30,
+    logical_consistency: 20,
+    case_relevance: 20,
+    persuasive_rhetoric: 15,
+    institutional_applicability: 15
+};
+
+// Değerlendirme tamamlandıktan sonra, kişinin kendi zayıf noktalarına özel,
+// kurumsal dilde yazılmış bir gelişim makalesi üretir. Katılımcı sonuçlarını
+// gördüğünde "nerede eksik kaldığını" sadece 2-3 cümlelik bir notla değil,
+// bunu geliştirmesine yardımcı olacak dolu bir okuma materyaliyle görsün diye.
+async function generateDevelopmentArticle(caseData, response, evaluation) {
+    const criteriaSummary = Object.entries(evaluation.criteria || {})
+        .map(([key, val]) => `${CRITERIA_LABELS[key] || key}: ${val} / ${CRITERIA_MAX[key] || '?'}`)
+        .join('\n') || 'Kriter puanı bulunamadı.';
+
+    const prompt = `Sen, kurumsal eğitim ve liderlik gelişimi alanında uzman bir danışmansın. Aşağıda bir yönetim vakası, bir katılımcının bu vakaya verdiği cevap ve bu cevabın Friedrich Nietzsche'nin felsefesi perspektifinden yapılmış değerlendirmesi var. Bu kişiye özel, onun ZAYIF olduğu noktaları hedef alan, kurumsal/profesyonel dilde yazılmış bir gelişim makalesi hazırla.
+
+VAKA:
+${caseData.title ? caseData.title + '\n' : ''}${caseData.content}
+
+KATILIMCININ CEVABI:
+${response.answer}
+
+KRİTER PUANLARI:
+${criteriaSummary}
+
+DEĞERLENDİRMEDEKİ HATALAR/EKSİKLER:
+${evaluation.weaknesses || '-'}
+
+GELİŞİM ÖNERİSİ:
+${evaluation.improvement_advice || '-'}
+
+Makale şöyle olsun:
+- 300-500 kelime, akıcı bir kurumsal gelişim/eğitim yazısı üslubunda — akademik bir felsefe makalesi gibi değil, bir şirketin iç eğitim dokümanı ya da liderlik gelişim bülteni gibi anlaşılır ve profesyonel bir dille yazılsın.
+- Kişinin en düşük puan aldığı 1-2 kriteri merkeze alsın; Nietzsche'nin ilgili düşüncelerini somut, güncel kurumsal örneklerle açıklasın.
+- Kişiyi suçlayıcı değil, yapıcı ve geliştirici bir tonda olsun.
+- Sonunda, kişinin bir dahaki vakada nelere dikkat edebileceğine dair 2-3 maddelik kısa ve somut bir "Uygulama Notları" bölümü olsun.
+- İlk satırda kısa, çarpıcı bir başlık olsun (örn: "Gücün Kaynağını Yeniden Düşünmek"), sonrasında makale metni gelsin.
+
+Sadece makaleyi yaz, başka açıklama ekleme.`;
+
+    try {
+        return (await callGemini(prompt)).trim();
+    } catch (e) {
+        console.error('Gelişim makalesi üretilemedi:', e.message);
+        return '';
+    }
+}
+
 // ==================== API: YENİ VAKA BAŞLAT ====================
 app.post('/api/start-round', async (req, res) => {
     try {
@@ -302,6 +361,7 @@ app.post('/api/evaluate-round', async (req, res) => {
         const evaluations = [];
         for (const response of responses) {
             const evaluation = await evaluateResponseWithAI(caseData, response);
+            evaluation.development_article = await generateDevelopmentArticle(caseData, response, evaluation);
             evaluations.push({ ...response, evaluation });
 
             await db.collection('evaluations').doc(`case${caseNumber}_${response.participant_id}`).set({
