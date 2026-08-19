@@ -16,6 +16,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 📚 Geçmiş Denemeler: Paylaşılmış her vaka "Deneme - N" olarak açılır/kapanır bir listede kalıcı olarak saklanır; herkes istediği zaman geri dönüp cevapları/puanları/gerekçeleri tekrar görebilir
 ✅ Kazanımlar / ❌ Hatalar: Her değerlendirme artık sadece güçlü yönleri değil, puanın nereden/neden kırıldığını ve kişiye özel gelişim önerisini de ayrı ayrı gösterir
 📄 Size Özel Gelişim Makalesi: Değerlendirme tamamlandığında, her katılımcı için ayrıca ikinci bir Gemini çağrısı yapılır — kişinin en düşük puan aldığı kriter(ler)i hedef alan, kurumsal/profesyonel dilde yazılmış 300-500 kelimelik bir gelişim makalesi üretilir (sonunda somut "Uygulama Notları" ile birlikte). Sonuç kartında "Hatalar" kutusunun altında açılır/kapanır bir bölüm olarak görünür; mevcut şeffaflık ilkesine uygun olarak herkes herkesin makalesini görebilir
+🏆 Örnek En İyi Cevap: Değerlendirme sırasında, vaka başına bir kez (katılımcı başına değil), Gemini o vakaya verilebilecek 100 puanlık örnek/model bir cevap üretir ve bunun 5 kriterin her birinden neden tam puan aldığını ayrı ayrı açıklar. Bu bilgi hiçbir şekilde vaka aktifken/cevaplanırken gösterilmez; sadece admin "Sonuçları Katılımcılara Paylaş"a bastıktan sonra, ilgili "Deneme - N" kaydının vaka metninin hemen altında, katılımcı sonuçlarından önce görünür hale gelir
 🎓 Eğitimler: Admin, katılımcılar için eğitim dosyası (~650 KB'a kadar PDF/Word/Excel/metin/resim) yükleyebilir. Sadece "Oku" ile görüntülenir — indirme butonu yok; Word (.docx) ve Excel (.xlsx) dosyaları da tarayıcı içinde okunabilir şekilde gösterilir. Admin panelinde her eğitim için "kim okudu / kim okumadı" listesi görünür
 ⏱️ Eğitim Okuma Süresi Takibi: "Oku"ya basıldığı an başlar, pencere kapatılınca (ya da sekme gizlenince) biter; okurken her 20 saniyede bir kısmi kayıt alınır, ani kapanmalarda en fazla ~20 saniyelik veri kaybı olur. Admin panelinde ayrı bir "📊 Eğitim Katılım Raporu" bölümünde her katılımcı × her eğitim için okundu/okunmadı ve toplam harcanan süre tek bir tabloda görünür
 🧠 Nasıl Çalışır (Akış)
@@ -24,9 +25,9 @@ Admin "Yapay Zekadan Yeni Vaka İste ve Yarışmayı Başlat" butonuna basar.
 Sunucu (backend), Gemini API'yi çağırarak o an, özgün bir vaka üretir ve Firestore'a yazar. Bu an itibarıyla hem admin hem tüm katılımcılar vakayı aynı anda görür — önceden kimse bilmez.
 Katılımcı ekranında 30 dakikalık geri sayım başlar; herkes kendi cevabını metin kutusuna yazar.
 Bir katılımcı "Cevabı Gönder"e bastığında ekranı "diğer katılımcıları bekliyoruz (X / Y cevapladı)" durumuna geçer.
-Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda) — admin bir katılımcı sayılmaz, sadece gerçek katılımcılar beklenir — sistem otomatik olarak Gemini API'ye her cevabı gönderir, 5 kritere göre ağırlıklı puanlar (toplam 100 puan) ve en yüksek puanı alanı o vakanın kazananı olarak belirler (20.000 TL).
+Tüm bağlı katılımcılar cevap verdiğinde (ya da 30 dakika dolduğunda) — admin bir katılımcı sayılmaz, sadece gerçek katılımcılar beklenir — sistem otomatik olarak Gemini API'ye her cevabı gönderir, 5 kritere göre ağırlıklı puanlar (toplam 100 puan) ve en yüksek puanı alanı o vakanın kazananı olarak belirler (20.000 TL). Aynı adımda, vaka başına bir kez, o vakaya verilebilecek 100 puanlık örnek en iyi cevap da üretilir.
 Değerlendirme bitince sonuçlar önce sadece admin'e görünür (cevaplar + puanlar + gerekçeler). Admin panelinde "📢 Sonuçları Katılımcılara Paylaş" butonu belirir; admin sonuçları inceler.
-Admin butona bastığında sonuçlar tüm katılımcılara aynı anda açılır — her katılımcı kendi puanını, gerekçesini ve diğer tüm katılımcıların cevap/puan/gerekçelerini görür. Amaç kişileri birbirine karşı yarıştırmak değil, Nietzsche'nin fikirlerine en yakın cevabı bulmak ve herkesin kendi eksiklerini görmesini sağlamaktır.
+Admin butona bastığında sonuçlar tüm katılımcılara aynı anda açılır — her katılımcı kendi puanını, gerekçesini ve diğer tüm katılımcıların cevap/puan/gerekçelerini görür. Aynı anda, ilgili "Geçmiş Denemeler" kaydında vaka metninin altında örnek en iyi cevap ve bu cevabın neden tam puan aldığının açıklaması da görünür hale gelir. Amaç kişileri birbirine karşı yarıştırmak değil, Nietzsche'nin fikirlerine en yakın cevabı bulmak ve herkesin kendi eksiklerini görmesini sağlamaktır.
 Admin bir sonraki vaka için tekrar "Yeni Vaka İste ve Başlat" butonuna basar (7 vaka için 7 kez).
 🚀 Kurulum
 1. Gereksinimler
@@ -104,7 +105,7 @@ Gemini API hatası (vaka üretilmiyor / değerlendirme yapılmıyor)
 Railway Variables'da `GEMINI_API_KEY` doğru mu kontrol et (https://aistudio.google.com/apikey adresinden alınmış olmalı)
 Railway'deki Deploy Logs'a bak — backend konsola hatayı yazar
 Ücretsiz katmanın dakikalık istek sınırına takılırsa sistem otomatik tekrar dener; sürekli tekrarlıyorsa birkaç dakika bekleyip tekrar dene
-Her katılımcı için artık iki Gemini çağrısı yapılıyor (puanlama + gelişim makalesi), bu yüzden değerlendirme aşaması katılımcı sayısı arttıkça biraz daha uzun sürebilir — bu normaldir, admin panelinde "🤖 yapay zeka değerlendiriyor" durumunda bekle
+Her katılımcı için artık iki Gemini çağrısı yapılıyor (puanlama + gelişim makalesi), buna ek olarak vaka başına bir kez örnek en iyi cevap için bir çağrı daha yapılıyor; bu yüzden değerlendirme aşaması katılımcı sayısı arttıkça biraz daha uzun sürebilir — bu normaldir, admin panelinde "🤖 yapay zeka değerlendiriyor" durumunda bekle
 Vaka görünmüyor / yarışma başlamıyor
 Admin panelindeki Sistem Günlüğü'nde "Vaka başlatma hatası" var mı bak
 En az 1 katılımcının o an "Bağlı" (çevrimiçi) görünmesi gerekir (buton aksi halde pasif kalır) — hiç kimse bağlı değilse, ilgili katılımcının sayfayı açıp beklemesini iste
