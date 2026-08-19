@@ -456,6 +456,35 @@
             color: #a54552;
         }
 
+        /* SONUÇ KARTI: KİŞİYE ÖZEL GELİŞİM MAKALESİ */
+        .article-box {
+            margin-top: 8px;
+            padding: 12px 14px;
+            background: #f0f1fc;
+            border-radius: 6px;
+            border-left: 3px solid #6175d1;
+        }
+
+        .article-box summary {
+            cursor: pointer;
+            font-weight: bold;
+            color: #4a56b8;
+        }
+
+        .article-box summary:hover {
+            color: #6175d1;
+        }
+
+        .article-title {
+            color: #333;
+            font-weight: bold;
+            margin: 10px 0 6px;
+        }
+
+        .article-body p {
+            margin-bottom: 8px;
+        }
+
         /* EĞİTİMLER */
         .training-card {
             background: #f8f9fa;
@@ -1088,6 +1117,23 @@
         // (aynı anahtarla tekrar çağrılırsa öncekini kapatır, dinleyici sızıntısını önler)
         const activeListeners = {};
 
+        // Kişiye özel gelişim makalesini (ilk satır başlık, gerisi metin) okunabilir
+        // HTML'e çevirir. Backend'in ürettiği düz metni <details> içinde gösterir.
+        function renderDevelopmentArticle(articleText) {
+            if (!articleText || !articleText.trim()) {
+                return '<p style="color:#999; font-size:12px; margin-top:6px;">Bu deneme için gelişim makalesi üretilemedi.</p>';
+            }
+            const lines = articleText.trim().split('\n').filter(l => l.trim().length > 0);
+            const title = (lines[0] || '').replace(/^#+\s*/, '').trim();
+            const bodyParagraphs = lines.slice(1)
+                .map(p => `<p>${p.replace(/</g, '&lt;')}</p>`)
+                .join('');
+            return `
+                <p class="article-title">${title}</p>
+                <div class="article-body" style="color:#333; font-size:13px; line-height:1.6;">${bodyParagraphs}</div>
+            `;
+        }
+
         // Bir vakanın tüm katılımcı sonuçlarını (cevap + puan + kazanım/hata) HTML'e çevirir.
         // Hem canlı sonuç kutusunda (watchResults) hem de Geçmiş Denemeler detayında kullanılır.
         function buildResultCardsHTML(evals) {
@@ -1114,6 +1160,10 @@
                         <p style="margin-top:4px; color:#333; font-size:13px;"><strong>Puan kaybı:</strong> ${e.evaluation?.weaknesses || '-'}</p>
                         <p style="margin-top:6px; color:#333; font-size:13px;"><strong>Gelişim önerisi:</strong> ${e.evaluation?.improvement_advice || '-'}</p>
                     </div>
+                    <details class="article-box">
+                        <summary>📄 Size Özel Gelişim Makalesi</summary>
+                        ${renderDevelopmentArticle(e.evaluation?.development_article)}
+                    </details>
                     <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Genel değerlendirme:</strong> ${e.evaluation?.general_evaluation || '-'}</p>
                 </div>
             `).join('');
