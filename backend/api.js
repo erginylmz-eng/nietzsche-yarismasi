@@ -268,6 +268,49 @@ Sadece makaleyi yaz, başka açıklama ekleme.`;
     }
 }
 
+// Bir vakaya, Nietzsche'nin felsefesi perspektifinden verilebilecek EN İYİ
+// (100 puan alacak) cevabı ve bu cevabın 5 kritere göre neden tam puan
+// aldığının açıklamasını üretir. Katılımcı başına değil, vaka başına BİR KEZ
+// üretilir (tüm katılımcılar için ortak bir referans/model cevaptır).
+// Değerlendirme sırasında üretilip vaka kaydına yazılır; sadece "Geçmiş
+// Denemeler" listesinde, o deneme yayınlandıktan sonra görünür hale gelir —
+// vaka aktif sorulurken hiçbir ekranda gösterilmez.
+async function generateIdealAnswer(caseData) {
+    const prompt = `Friedrich Nietzsche'nin felsefesi perspektifinden aşağıdaki vakaya, bir katılımcının verebileceği EN İYİ, kusursuz cevabı sen yaz — bu cevap, aşağıda tanımlanan 5 kriterin her birinden tam puan alacak nitelikte olmalı.
+
+VAKA (Tema: ${caseData.theme}):
+${caseData.title ? caseData.title + '\n' : ''}${caseData.content}
+
+Değerlendirme kriterleri (bu örnek cevap her birinden tam puan alacak şekilde yazılmalı):
+1. Filozofun Bakış Açısına Sadakat (30 puan) — Nietzsche'nin felsefesini derin ve doğru şekilde yansıtmalı
+2. Mantıksal Tutarlılık (20 puan) — argüman baştan sona iç tutarlı olmalı, çelişki içermemeli
+3. Vakaya Uygunluk (20 puan) — genel geçer/ezber bir anlatı değil, doğrudan bu somut vakaya değinmeli
+4. İkna Gücü ve Retorik Yetkinlik (15 puan) — ikna edici, iyi kurgulanmış bir argümantasyon olmalı
+5. Kurumsal Uygulanabilirlik (15 puan) — önerilen yaklaşım gerçek bir şirkette uygulanabilir olmalı
+
+SADECE aşağıdaki JSON formatında yanıt ver, başka hiçbir açıklama ekleme, markdown code fence kullanma:
+{
+  "ideal_answer": "Vakaya verilecek örnek en iyi cevabın tam metni (Nietzsche'nin bakış açısını uygulayan, vakadaki soruların hepsini yanıtlayan, 4-6 paragraf uzunluğunda dolu bir cevap)",
+  "scoring_explanation": "Bu örnek cevabın yukarıdaki 5 kriterin her birinden neden tam puan aldığının, kritere kritere somut gerekçelerle açıklaması (her kriter için 1-2 cümle)"
+}`;
+
+    try {
+        const text = await callGemini(prompt);
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (typeof parsed.ideal_answer === 'string' && typeof parsed.scoring_explanation === 'string') {
+                return parsed;
+            }
+        }
+        console.error('İdeal cevap JSON formatı beklenmedik, ham metin kullanılıyor.');
+        return { ideal_answer: text.trim(), scoring_explanation: '' };
+    } catch (e) {
+        console.error('İdeal cevap üretilemedi:', e.message);
+        return { ideal_answer: '', scoring_explanation: '' };
+    }
+}
+
 // ==================== API: YENİ VAKA BAŞLAT ====================
 app.post('/api/start-round', async (req, res) => {
     try {
@@ -376,6 +419,18 @@ app.post('/api/evaluate-round', async (req, res) => {
         }
 
         evaluations.sort((a, b) => (b.evaluation.total_score || 0) - (a.evaluation.total_score || 0));
+
+        // Vaka başına bir kez: bu vakaya verilebilecek en iyi cevap ve neden tam
+        // puan aldığının açıklaması. Katılımcı sonuçlarıyla birlikte değil, doğrudan
+        // vaka kaydının üzerine yazılır — "Geçmiş Denemeler" ekranı bu kaydı zaten
+        // sadece o deneme yayınlandıktan (published) sonra okuyup gösterir.
+        console.log(`Vaka #${caseNumber} için örnek en iyi cevap üretiliyor...`);
+        const { ideal_answer: idealAnswer, scoring_explanation: idealAnswerExplanation } = await generateIdealAnswer(caseData);
+        await db.collection('cases').doc('case_' + caseNumber).set({
+            idealAnswer,
+            idealAnswerExplanation,
+            idealAnswerGeneratedAt: FieldValue.serverTimestamp()
+        }, { merge: true });
 
         if (evaluations.length > 0) {
             const winner = evaluations[0];
