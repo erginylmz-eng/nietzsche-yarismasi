@@ -37,7 +37,22 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const MODEL = 'gemini-3.5-flash';
+
+// Google, ücretsiz modelleri sık sık değiştiriyor/emekliye ayırıyor (bu proje
+// boyunca birden fazla kez bir model adı aniden "bulunamadı" hatası vermeye
+// başladı ya da günlük ücretsiz kullanım hakkı beklenenden çok daha düşük
+// çıktı). Tek bir model adına kilitlenmek yerine, sırayla denenecek bir liste
+// tutuyoruz: birinci model ya "bulunamadı" (kaldırılmış/yeniden adlandırılmış)
+// hatası ya da GÜNLÜK kota hatası verirse, otomatik olarak bir sonraki modele
+// geçilir — sistem tek bir modelin durumuna bağımlı kalmaz.
+//   1) gemini-2.5-flash: ücretsiz katmanda günde ~250 istek hakkı verir (bu
+//      projenin ihtiyacı için yeterli), ancak Google tarafından "deprecated"
+//      işaretlenmiş ve 16 Ekim 2026'da tamamen kapatılması planlanıyor.
+//   2) gemini-3.5-flash: güncel/desteklenen model ama ücretsiz katmanda
+//      günde sadece 20 istek hakkı veriyor — yedek olarak tutuluyor.
+// Bu tarih yaklaştıkça ya da yeni bir model deneyip "bulunamadı" hatası
+// alındıkça, bu listeye güncel model adını eklemek yeterli olacak.
+const MODEL_CANDIDATES = ['gemini-2.5-flash', 'gemini-3.5-flash'];
 
 const THEMES = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
 const ROUND_DURATION_MS = 30 * 60 * 1000;
@@ -45,36 +60,55 @@ const ADMIN_EMAIL = 'erginylmz@gmail.com';
 
 // Ücretsiz katmanın dakikalık istek sınırına takılırsak ya da Google'ın
 // sunucuları geçici olarak aşırı yüklüyse (503 UNAVAILABLE) kısa bekleyip tekrar dene.
+// Bir modelin kendisi kaldırılmışsa ("not found") ya da o modelin GÜNLÜK kotası
+// tükenmişse, aynı modeli tekrar denemek yerine listedeki bir sonraki modele geçilir.
 async function callGemini(prompt, maxRetries = 4) {
     if (!process.env.GEMINI_API_KEY) {
         throw new Error('GEMINI_API_KEY tanımlı değil. Railway → Variables kısmında bu değişkeni ekleyip yeniden deploy et.');
     }
 
     let lastError;
-    for (let attempt = 0; attempt < maxRetries; attempt++) {
-        try {
-            const response = await ai.models.generateContent({
-                model: MODEL,
-                contents: prompt
-            });
-            return response.text;
-        } catch (error) {
-            lastError = error;
-            const status = error?.status || error?.code;
-            const message = error?.message || '';
-            const isRetryable =
-                status === 429 || status === 503 ||
-                /rate.?limit|quota/i.test(message) ||
-                /UNAVAILABLE|overloaded|high demand|internal error|try again later/i.test(message);
+    for (const model of MODEL_CANDIDATES) {
+        for (let attempt = 0; attempt < maxRetries; attempt++) {
+            try {
+                const response = await ai.models.generateContent({
+                    model,
+                    contents: prompt
+                });
+                return response.text;
+            } catch (error) {
+                lastError = error;
+                const status = error?.status || error?.code;
+                const message = error?.message || '';
 
-            if (isRetryable && attempt < maxRetries - 1) {
-                // Kademeli bekleme: 3sn, 6sn, 12sn (üst sınır 12sn)
-                const waitMs = Math.min(3000 * Math.pow(2, attempt), 12000);
-                console.log(`Gemini geçici hata (${status || '?'}), ${waitMs}ms bekleyip tekrar deneniyor (deneme ${attempt + 1}/${maxRetries})...`);
-                await new Promise(r => setTimeout(r, waitMs));
-                continue;
+                // Model kaldırılmış/yeniden adlandırılmış, ya da bu modelin günlük
+                // (dakikalık değil) kotası tükenmiş — bu modeli tekrar denemenin
+                // anlamı yok, listedeki bir sonraki modele geç.
+                const isModelGone = status === 404 || /not found|NOT_FOUND/i.test(message);
+                const isDailyQuotaGone = /PerDay/i.test(message) && (status === 429 || /RESOURCE_EXHAUSTED/i.test(message));
+                if (isModelGone || isDailyQuotaGone) {
+                    console.warn(`⚠ Model "${model}" kullanılamıyor (${isModelGone ? 'bulunamadı/kaldırılmış' : 'günlük kota doldu'}), sıradaki modele geçiliyor...`);
+                    break;
+                }
+
+                const isRetryable =
+                    status === 429 || status === 503 ||
+                    /rate.?limit|quota/i.test(message) ||
+                    /UNAVAILABLE|overloaded|high demand|internal error|try again later/i.test(message);
+
+                if (isRetryable && attempt < maxRetries - 1) {
+                    // Kademeli bekleme: 3sn, 6sn, 12sn (üst sınır 12sn)
+                    const waitMs = Math.min(3000 * Math.pow(2, attempt), 12000);
+                    console.log(`Gemini geçici hata (${status || '?'}, model: ${model}), ${waitMs}ms bekleyip tekrar deneniyor (deneme ${attempt + 1}/${maxRetries})...`);
+                    await new Promise(r => setTimeout(r, waitMs));
+                    continue;
+                }
+
+                // Kalıcı, tekrar denenemez bir hata — bu modelden vazgeç, sıradaki
+                // modele geç (belki de sorun sadece bu modele özgüdür).
+                console.warn(`⚠ Model "${model}" için kalıcı hata, sıradaki modele geçiliyor: ${message}`);
+                break;
             }
-            throw error;
         }
     }
     throw lastError;
