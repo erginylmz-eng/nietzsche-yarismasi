@@ -929,6 +929,36 @@
                     </div>
                 </details>
             </div>
+
+            <div class="case-container">
+                <details class="collapsible">
+                    <summary class="collapsible-summary">🧪 Pratik Modu</summary>
+                    <div class="collapsible-body">
+                        <p style="color:#666; font-size:13px; margin-bottom:10px;">Bu alan yarışmadan tamamen bağımsızdır — diğer katılımcıları ya da yarışma sonuçlarını hiçbir şekilde etkilemez. İstediğin zaman kendine özel bir pratik vakası isteyebilir, cevap verip anında sadece kendi puanını ve detaylarını görebilirsin (günde en fazla 5 pratik vakası).</p>
+
+                        <button id="practiceNewCaseBtn" onclick="requestPracticeCase()">🎲 Yeni Pratik Vakası Oluştur</button>
+
+                        <div id="practiceActiveArea" style="display:none; margin-top:14px;">
+                            <div class="case-container">
+                                <h3>Pratik Vaka</h3>
+                                <div class="case-text" id="practiceCaseContent"></div>
+                            </div>
+                            <h3>Kararınız</h3>
+                            <textarea id="practiceAnswerTextarea" placeholder="Bu vakada yönetici olarak ne karar verirdiniz? Kararınızı ve gerekçenizi detaylı olarak açıklayın..." maxlength="5000"></textarea>
+                            <div class="char-count"><span id="practiceCharCount">0</span> / 5000 karakter</div>
+                            <button class="submit-btn" id="practiceSubmitBtn" onclick="submitPracticeAnswer()">Cevabı Gönder</button>
+                            <p id="practiceEvaluatingText" style="display:none; color:#6175d1; font-size:13px; margin-top:8px;">🤖 yapay zeka değerlendiriyor...</p>
+                        </div>
+
+                        <div id="practiceResultArea" style="margin-top:14px;"></div>
+
+                        <h4 class="subsection-title" style="margin-top:18px;">📜 Geçmiş Pratik Denemeleri</h4>
+                        <div id="practiceHistoryList">
+                            <p style="color: #999; font-size: 13px;">Henüz bir pratik denemen yok.</p>
+                        </div>
+                    </div>
+                </details>
+            </div>
         </div>
     </div>
 
@@ -2149,6 +2179,187 @@
             document.getElementById('answerTextarea').addEventListener('input', function() {
                 document.getElementById('charCount').textContent = this.value.length;
             });
+
+            document.getElementById('practiceAnswerTextarea').addEventListener('input', function() {
+                document.getElementById('practiceCharCount').textContent = this.value.length;
+            });
+            restorePracticeState(db, user);
+        }
+
+        // ==================== PRATİK MODU (kişisel, yarışmadan tamamen bağımsız) ====================
+        // Gerçek yarışma verisiyle (cases/responses/evaluations/session/winners) hiç
+        // karışmaz — ayrı bir Firestore koleksiyonunda (practice_attempts) tutulur ve
+        // sadece kendi sahibi (ve admin) tarafından okunabilir. Bir katılımcının burada
+        // yaptığı hiçbir şey diğer katılımcıları, bekleme sayaçlarını ya da ödülü etkilemez.
+        let practiceActiveAttemptId = null;
+
+        function renderPracticeResultHTML(answer, evaluation) {
+            if (!evaluation) return '';
+            return `
+                <div class="result-card">
+                    <div class="clearfix">
+                        <strong>Senin Cevabın</strong>
+                        <span class="score">${evaluation.total_score ?? 0} / 100</span>
+                    </div>
+                    <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Cevap:</strong></p>
+                    <p style="margin-top:2px; color:#333; font-size:13px; white-space:pre-wrap; background:#fff; padding:8px; border-radius:6px;">${(answer || '').replace(/</g, '&lt;')}</p>
+                    <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Filozofun Bakış Açısına Sadakat:</strong> ${evaluation.criteria?.philosopher_fidelity ?? '-'} / 30 &nbsp;|&nbsp; <strong>Mantıksal Tutarlılık:</strong> ${evaluation.criteria?.logical_consistency ?? '-'} / 20 &nbsp;|&nbsp; <strong>Vakaya Uygunluk:</strong> ${evaluation.criteria?.case_relevance ?? '-'} / 20 &nbsp;|&nbsp; <strong>İkna Gücü ve Retorik Yetkinlik:</strong> ${evaluation.criteria?.persuasive_rhetoric ?? '-'} / 15 &nbsp;|&nbsp; <strong>Kurumsal Uygulanabilirlik:</strong> ${evaluation.criteria?.institutional_applicability ?? '-'} / 15</p>
+                    <div class="gains-box">
+                        <strong>✅ Kazanımlar</strong>
+                        <p style="margin-top:4px; color:#333; font-size:13px;">${evaluation.strengths || '-'}</p>
+                    </div>
+                    <div class="mistakes-box">
+                        <strong>❌ Hatalar</strong>
+                        <p style="margin-top:4px; color:#333; font-size:13px;"><strong>Puan kaybı:</strong> ${evaluation.weaknesses || '-'}</p>
+                        <p style="margin-top:6px; color:#333; font-size:13px;"><strong>Gelişim önerisi:</strong> ${evaluation.improvement_advice || '-'}</p>
+                    </div>
+                    <p style="margin-top:8px; color:#555; font-size:13px;"><strong>Genel değerlendirme:</strong> ${evaluation.general_evaluation || '-'}</p>
+                </div>
+            `;
+        }
+
+        function resetPracticeAnswerUI() {
+            const textarea = document.getElementById('practiceAnswerTextarea');
+            const submitBtn = document.getElementById('practiceSubmitBtn');
+            if (textarea) { textarea.value = ''; textarea.disabled = false; }
+            if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = 'Cevabı Gönder'; }
+            const charCountEl = document.getElementById('practiceCharCount');
+            if (charCountEl) charCountEl.textContent = '0';
+            const evaluatingText = document.getElementById('practiceEvaluatingText');
+            if (evaluatingText) evaluatingText.style.display = 'none';
+        }
+
+        async function requestPracticeCase() {
+            const user = firebaseAuth.currentUser;
+            if (!user) return;
+            const btn = document.getElementById('practiceNewCaseBtn');
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = 'Vaka hazırlanıyor... (10-20 sn sürebilir)';
+            addDebugLog("▶ Pratik vakası isteniyor...");
+
+            try {
+                const res = await fetch('/api/practice/generate-case', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid: user.uid, email: user.email, name: user.displayName || '' })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Bilinmeyen hata');
+
+                practiceActiveAttemptId = data.attemptId;
+                document.getElementById('practiceCaseContent').innerHTML =
+                    `<strong>Tema: ${data.theme}</strong>${data.title ? ' — ' + data.title : ''}<br><br>${(data.content || '').replace(/\n/g, '<br>')}`;
+                document.getElementById('practiceActiveArea').style.display = 'block';
+                document.getElementById('practiceResultArea').innerHTML = '';
+                resetPracticeAnswerUI();
+                addDebugLog(`✓ Pratik vakası oluşturuldu (tema: ${data.theme})`);
+            } catch (err) {
+                addDebugLog("✗ Pratik vakası oluşturulamadı: " + err.message);
+                alert('Pratik vakası oluşturulamadı: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = originalText;
+            }
+        }
+
+        async function submitPracticeAnswer() {
+            const user = firebaseAuth.currentUser;
+            if (!user || !practiceActiveAttemptId) return;
+            const answer = document.getElementById('practiceAnswerTextarea').value;
+            if (!answer.trim()) {
+                alert('Lütfen cevap yazın!');
+                return;
+            }
+
+            const textarea = document.getElementById('practiceAnswerTextarea');
+            const submitBtn = document.getElementById('practiceSubmitBtn');
+            const evaluatingText = document.getElementById('practiceEvaluatingText');
+            textarea.disabled = true;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Gönderiliyor...';
+            if (evaluatingText) evaluatingText.style.display = 'block';
+            addDebugLog("▶ Pratik cevabı gönderiliyor...");
+
+            try {
+                const res = await fetch('/api/practice/submit-answer', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid: user.uid, attemptId: practiceActiveAttemptId, answer })
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Bilinmeyen hata');
+
+                document.getElementById('practiceResultArea').innerHTML = renderPracticeResultHTML(answer, data.evaluation);
+                document.getElementById('practiceActiveArea').style.display = 'none';
+                practiceActiveAttemptId = null;
+                addDebugLog(`✓ Pratik cevabı değerlendirildi (${data.evaluation?.total_score ?? '-'} / 100)`);
+                loadPracticeHistory(firebase.firestore(), user);
+            } catch (err) {
+                addDebugLog("✗ Pratik cevabı değerlendirilemedi: " + err.message);
+                alert('Cevap değerlendirilemedi: ' + err.message);
+                textarea.disabled = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Cevabı Gönder';
+                if (evaluatingText) evaluatingText.style.display = 'none';
+            }
+        }
+
+        async function loadPracticeHistory(db, user) {
+            const listEl = document.getElementById('practiceHistoryList');
+            if (!listEl) return;
+            try {
+                const snap = await db.collection('practice_attempts').where('participant_id', '==', user.uid).get();
+                const attempts = [];
+                snap.forEach(doc => attempts.push({ id: doc.id, ...doc.data() }));
+                // En yeniden en eskiye sırala — Firestore'da ayrı bir bileşik indeks
+                // oluşturmak gerekmesin diye sıralama burada, istemci tarafında yapılır.
+                attempts.sort((a, b) => (b.created_at?.toMillis?.() || 0) - (a.created_at?.toMillis?.() || 0));
+                const evaluated = attempts.filter(a => a.status === 'evaluated');
+
+                if (evaluated.length === 0) {
+                    listEl.innerHTML = '<p style="color:#999; font-size:13px;">Henüz bir pratik denemen yok.</p>';
+                    return;
+                }
+
+                listEl.innerHTML = evaluated.map((a, i) => `
+                    <details class="history-item">
+                        <summary class="history-item-summary">Pratik - ${evaluated.length - i} <span style="color:#999; font-weight:normal;">(${a.theme || ''}${a.title ? ' — ' + a.title : ''}) — ${a.evaluation?.total_score ?? 0} / 100</span></summary>
+                        <div class="history-item-body">
+                            <div class="case-text" style="margin-bottom:15px;">
+                                <strong>Tema: ${a.theme || '-'}</strong>${a.title ? ' — ' + a.title : ''}<br><br>
+                                ${(a.content || '').replace(/\n/g, '<br>')}
+                            </div>
+                            ${renderPracticeResultHTML(a.answer, a.evaluation)}
+                        </div>
+                    </details>
+                `).join('');
+            } catch (err) {
+                listEl.innerHTML = '<p style="color:#a54552; font-size:13px;">Geçmiş yüklenemedi: ' + err.message + '</p>';
+                addDebugLog("✗ pratik geçmişi yükleme hatası: " + err.message);
+            }
+        }
+
+        // Sayfa yenilenirse, henüz cevaplanmamış açık bir pratik vakası varsa geri
+        // yükler (kaybolmasın diye); ardından geçmiş listesini yükler.
+        async function restorePracticeState(db, user) {
+            try {
+                const snap = await db.collection('practice_attempts').where('participant_id', '==', user.uid).get();
+                const attempts = [];
+                snap.forEach(doc => attempts.push({ id: doc.id, ...doc.data() }));
+                attempts.sort((a, b) => (b.created_at?.toMillis?.() || 0) - (a.created_at?.toMillis?.() || 0));
+                const active = attempts.find(a => a.status === 'answering');
+                if (active) {
+                    practiceActiveAttemptId = active.id;
+                    document.getElementById('practiceCaseContent').innerHTML =
+                        `<strong>Tema: ${active.theme}</strong>${active.title ? ' — ' + active.title : ''}<br><br>${(active.content || '').replace(/\n/g, '<br>')}`;
+                    document.getElementById('practiceActiveArea').style.display = 'block';
+                    resetPracticeAnswerUI();
+                }
+            } catch (err) {
+                addDebugLog("✗ pratik durumu geri yüklenemedi: " + err.message);
+            }
+            loadPracticeHistory(db, user);
         }
 
         async function restoreOrResetParticipantUI(db, user, caseNumber) {
