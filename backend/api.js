@@ -553,6 +553,104 @@ app.post('/api/publish-results', async (req, res) => {
     }
 });
 
+// ==================== API: KİŞİSEL PRATİK MODU ====================
+// Gerçek yarışmadan tamamen bağımsız: her katılımcı istediği zaman kendi başına
+// bir pratik vakası isteyebilir, cevap verebilir ve SADECE kendi puanını/detayını
+// görebilir. Ayrı bir koleksiyonda (practice_attempts) tutulur; cases, responses,
+// evaluations, session, winners koleksiyonlarına hiç dokunmaz — bir katılımcının
+// burada yaptığı hiçbir şey diğer katılımcıları, bekleme sayaçlarını, yarışma
+// akışını ya da ödülü etkilemez.
+//
+// Günlük ücretsiz yapay zeka kotasının asıl yarışma turları için yeterli kalması
+// adına, katılımcı başına günlük pratik hakkı sınırlıdır (bu kendi kendine
+// tetiklenen bir özellik olduğu için, sınırsız bırakılırsa gerçek turlardan önce
+// günlük kotayı tüketebilir).
+const PRACTICE_DAILY_LIMIT = 5;
+
+app.post('/api/practice/generate-case', async (req, res) => {
+    try {
+        const { uid, email, name } = req.body || {};
+        if (!uid || !email) {
+            return res.status(400).json({ success: false, error: 'uid ve email gerekli.' });
+        }
+
+        // Günlük hak kontrolü (gün sınırı UTC'ye göre hesaplanır — dakika hassasiyetinde
+        // kesin olması gerekmiyor, amaç sadece günlük kotayı korumak).
+        const startOfDay = new Date();
+        startOfDay.setUTCHours(0, 0, 0, 0);
+        const existingSnap = await db.collection('practice_attempts')
+            .where('participant_id', '==', uid)
+            .get();
+        const todaysCount = existingSnap.docs.filter(d => {
+            const ts = d.data().created_at;
+            return ts && typeof ts.toDate === 'function' && ts.toDate() >= startOfDay;
+        }).length;
+        if (todaysCount >= PRACTICE_DAILY_LIMIT) {
+            return res.status(429).json({ success: false, error: `Günlük pratik hakkın doldu (günde en fazla ${PRACTICE_DAILY_LIMIT} vaka oluşturabilirsin). Yarın tekrar deneyebilirsin.` });
+        }
+
+        console.log(`Pratik vakası isteniyor (${email})...`);
+        const { theme, title, content } = await generateCaseWithAI();
+
+        const docRef = await db.collection('practice_attempts').add({
+            participant_id: uid,
+            participant_email: email,
+            participant_name: name || '',
+            theme,
+            title,
+            content,
+            status: 'answering',
+            answer: null,
+            evaluation: null,
+            created_at: FieldValue.serverTimestamp()
+        });
+
+        console.log(`✓ Pratik vakası oluşturuldu (${email}, tema: ${theme})`);
+        res.json({ success: true, attemptId: docRef.id, theme, title, content });
+    } catch (error) {
+        console.error('practice/generate-case error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/practice/submit-answer', async (req, res) => {
+    try {
+        const { uid, attemptId, answer } = req.body || {};
+        if (!uid || !attemptId || !answer || !answer.trim()) {
+            return res.status(400).json({ success: false, error: 'uid, attemptId ve answer gerekli.' });
+        }
+
+        const attemptRef = db.collection('practice_attempts').doc(attemptId);
+        const attemptDoc = await attemptRef.get();
+        if (!attemptDoc.exists) {
+            return res.status(404).json({ success: false, error: 'Pratik vakası bulunamadı.' });
+        }
+        const attempt = attemptDoc.data();
+        if (attempt.participant_id !== uid) {
+            return res.status(403).json({ success: false, error: 'Bu pratik vakası sana ait değil.' });
+        }
+        if (attempt.status === 'evaluated') {
+            return res.json({ success: true, alreadyEvaluated: true, evaluation: attempt.evaluation });
+        }
+
+        console.log(`Pratik cevabı değerlendiriliyor (${attempt.participant_email})...`);
+        const evaluation = await evaluateResponseWithAI(attempt, { answer });
+
+        await attemptRef.update({
+            answer,
+            evaluation,
+            status: 'evaluated',
+            evaluated_at: FieldValue.serverTimestamp()
+        });
+
+        console.log(`✓ Pratik cevabı değerlendirildi (${attempt.participant_email}, puan: ${evaluation.total_score})`);
+        res.json({ success: true, evaluation });
+    } catch (error) {
+        console.error('practice/submit-answer error:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 // ==================== DİĞER YARDIMCI UÇLAR ====================
 app.get('/api/winners', async (req, res) => {
     try {
