@@ -28,28 +28,39 @@ admin.initializeApp({
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 
-// ==================== YAPAY ZEKA (GROQ — ÜCRETSİZ KATMAN) ====================
-// Google Gemini'de art arda iki farklı ücretsiz katman sorunu yaşandı: önce bir
-// modelin günlük istek hakkının beklenenden çok düşük çıkması, sonra da Google
-// hesabına bağlı bir ödeme yönteminin devreye soktuğu "aylık harcama tavanı"
-// hatası. Bunun yerine Groq'a geçildi: Groq, ödeme yöntemi/kredi kartı hiç
-// istemeden (sadece e-posta ya da Google hesabıyla) API anahtarı veriyor, bu
-// yüzden bir "harcama tavanı" riski hiç yok — anahtar https://console.groq.com/keys
-// adresinden alınır. API, OpenAI'nin sohbet tamamlama (chat completions)
-// formatıyla uyumludur, bu yüzden ek bir paket kurmadan Node'un yerleşik
-// fetch'i ile çağrılır.
+// ==================== YAPAY ZEKA (GEMİNİ birincil, GROQ yedek — ikisi de ÜCRETSİZ KATMAN) ====================
+// Gemini birincil sağlayıcı: anahtar https://aistudio.google.com/apikey adresinden
+// alınır (REST API, ek paket gerekmez — Node'un yerleşik fetch'i ile çağrılır).
+// Gemini tarafında daha önce iki ayrı ücretsiz-katman sorunu yaşandığı için
+// (bir modelin günlük istek hakkının beklenenden düşük çıkması, ve hesaba bağlı
+// bir ödeme yönteminin tetiklediği "aylık harcama tavanı" hatası), Gemini'nin
+// TAMAMEN başarısız olduğu (tüm adaylar/denemeler tükendiği) her durumda sistem
+// otomatik olarak Groq'a düşer — Groq'ta ödeme yöntemi/kredi kartı hiç
+// istenmediği için "harcama tavanı" riski yoktur (anahtar https://console.groq.com/keys
+// adresinden alınır, API OpenAI'nin sohbet tamamlama formatıyla uyumludur).
+// Her iki anahtar da SADECE Railway → Variables kısmına eklenir; koda veya
+// herhangi bir dosyaya asla yazılmaz.
+if (!process.env.GEMINI_API_KEY) {
+    console.warn('⚠ GEMINI_API_KEY tanımlı değil — sistem doğrudan Groq yedeğine düşecek (varsa).');
+}
 if (!process.env.GROQ_API_KEY) {
-    console.error('✗ UYARI: GROQ_API_KEY ortam değişkeni tanımlı değil! Railway → Variables kısmını kontrol et.');
+    console.warn('⚠ GROQ_API_KEY tanımlı değil — Gemini tamamen başarısız olursa yedek sağlayıcı olmayacak.');
 }
 
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta/models';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// Groq da zaman zaman bir modeli emekliye ayırabiliyor ya da bir modelin günlük
-// isteği dolabiliyor; aynı dayanıklılık için birden fazla model sırayla denenir.
-// gpt-oss-120b birincil model (güçlü muhakeme, ücretsiz katmanda günde 1000
-// istek); ilk ikisi kullanılamazsa llama-3.1-8b-instant'a düşülür (günde 14.400
-// istek hakkı olan, daha küçük ama en bol kotalı yedek).
-const MODEL_CANDIDATES = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+// Gemini de zaman zaman bir modeli emekliye ayırıyor ya da bir modelin günlük
+// kotası dolabiliyor; aynı dayanıklılık için birden fazla model sırayla denenir.
+// gemini-2.5-flash birincil aday (daha önce bu sistemde başarıyla kullanıldı,
+// güçlü/dengeli bir model); ilk aday kullanılamazsa daha bol kotalı "lite"
+// modellere düşülür.
+const GEMINI_MODEL_CANDIDATES = ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+
+// Groq tarafı (yedek sağlayıcı): gpt-oss-120b birincil model (güçlü muhakeme,
+// ücretsiz katmanda günde 1000 istek); ilk ikisi kullanılamazsa
+// llama-3.1-8b-instant'a düşülür (günde 14.400 istek hakkı olan yedek).
+const GROQ_MODEL_CANDIDATES = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
 const THEMES = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
 const ROUND_DURATION_MS = 15 * 60 * 1000;
@@ -61,57 +72,88 @@ const ADMIN_EMAIL = 'erginylmz@gmail.com';
 // tutulur, birini değiştirirsen diğerini de güncellemen gerekir.
 const ONLINE_THRESHOLD_MS = 40000;
 
-// Ücretsiz katmanın dakikalık/günlük istek sınırına takılırsak ya da Groq'un
-// sunucuları geçici olarak aşırı yüklüyse kısa bekleyip tekrar dene. Bir model
-// kaldırılmışsa ("not found") ya da o modelin GÜNLÜK kotası tükenmişse, aynı
-// modeli tekrar denemek yerine listedeki bir sonraki modele geçilir.
-async function callAI(prompt, maxRetries = 4) {
-    if (!process.env.GROQ_API_KEY) {
-        throw new Error('GROQ_API_KEY tanımlı değil. Railway → Variables kısmında bu değişkeni ekleyip yeniden deploy et.');
+async function callGeminiRaw(model, prompt) {
+    const url = `${GEMINI_API_BASE}/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`;
+    const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.9 }
+        })
+    });
+
+    if (!res.ok) {
+        const errBody = await res.text();
+        const error = new Error(errBody || `Gemini isteği başarısız (HTTP ${res.status})`);
+        error.status = res.status;
+        throw error;
     }
 
+    const data = await res.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (typeof text !== 'string' || !text.trim()) {
+        // İçerik güvenlik filtresine takılıp boş dönmüş olabilir (finishReason: SAFETY vb.)
+        const finishReason = data?.candidates?.[0]?.finishReason;
+        throw new Error(`Gemini boş yanıt döndürdü${finishReason ? ` (finishReason: ${finishReason})` : ''}.`);
+    }
+    return text;
+}
+
+async function callGroqRaw(model, prompt) {
+    const res = await fetch(GROQ_API_URL, {
+        method: 'POST',
+        headers: {
+            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            model,
+            messages: [{ role: 'user', content: prompt }],
+            temperature: 0.9
+        })
+    });
+
+    if (!res.ok) {
+        const errBody = await res.text();
+        const error = new Error(errBody || `Groq isteği başarısız (HTTP ${res.status})`);
+        error.status = res.status;
+        throw error;
+    }
+
+    const data = await res.json();
+    const text = data?.choices?.[0]?.message?.content;
+    if (typeof text !== 'string' || !text.trim()) {
+        throw new Error('Groq boş yanıt döndürdü.');
+    }
+    return text;
+}
+
+// Ücretsiz katmanın dakikalık/günlük istek sınırına takılırsak ya da sağlayıcının
+// sunucuları geçici olarak aşırı yüklüyse kısa bekleyip tekrar dene. Bir model
+// kaldırılmışsa ("not found"), o modelin GÜNLÜK/aylık kotası tükenmişse ya da
+// proje bazlı bir harcama tavanına takılmışsa, aynı modeli tekrar denemek
+// yerine listedeki bir sonraki modele geçilir. Hem Gemini hem Groq için ortak
+// kullanılan tek bir yeniden-deneme/yedeğe-geçiş mantığı.
+async function runWithFallback(providerLabel, candidates, rawCaller, maxRetries) {
     let lastError;
-    for (const model of MODEL_CANDIDATES) {
+    for (const model of candidates) {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
-                const res = await fetch(GROQ_API_URL, {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        model,
-                        messages: [{ role: 'user', content: prompt }],
-                        temperature: 0.9
-                    })
-                });
-
-                if (!res.ok) {
-                    const errBody = await res.text();
-                    const error = new Error(errBody || `Groq isteği başarısız (HTTP ${res.status})`);
-                    error.status = res.status;
-                    throw error;
-                }
-
-                const data = await res.json();
-                const text = data?.choices?.[0]?.message?.content;
-                if (typeof text !== 'string' || !text.trim()) {
-                    throw new Error('Groq boş yanıt döndürdü.');
-                }
-                return text;
+                return await rawCaller(model);
             } catch (error) {
                 lastError = error;
                 const status = error?.status;
                 const message = error?.message || '';
 
-                // Model kaldırılmış/yeniden adlandırılmış, ya da bu modelin günlük
-                // (dakikalık değil) kotası tükenmiş — bu modeli tekrar denemenin
-                // anlamı yok, listedeki bir sonraki modele geç.
-                const isModelGone = status === 404 || /model_not_found|does not exist/i.test(message);
-                const isDailyQuotaGone = /rate_limit_exceeded/i.test(message) && /per day/i.test(message);
-                if (isModelGone || isDailyQuotaGone) {
-                    console.warn(`⚠ Model "${model}" kullanılamıyor (${isModelGone ? 'bulunamadı/kaldırılmış' : 'günlük kota doldu'}), sıradaki modele geçiliyor...`);
+                const isModelGone = status === 404 || /model_not_found|does not exist|not found for API/i.test(message);
+                const isQuotaGone =
+                    (/rate_limit_exceeded/i.test(message) && /per day/i.test(message)) ||
+                    (/RESOURCE_EXHAUSTED/i.test(message) && /quota/i.test(message)) ||
+                    /spending cap/i.test(message);
+
+                if (isModelGone || isQuotaGone) {
+                    console.warn(`⚠ [${providerLabel}] Model "${model}" kullanılamıyor (${isModelGone ? 'bulunamadı/kaldırılmış' : 'kota/harcama sınırı doldu'}), sıradaki modele geçiliyor...`);
                     break;
                 }
 
@@ -123,19 +165,40 @@ async function callAI(prompt, maxRetries = 4) {
                 if (isRetryable && attempt < maxRetries - 1) {
                     // Kademeli bekleme: 3sn, 6sn, 12sn (üst sınır 12sn)
                     const waitMs = Math.min(3000 * Math.pow(2, attempt), 12000);
-                    console.log(`Groq geçici hata (${status || '?'}, model: ${model}), ${waitMs}ms bekleyip tekrar deneniyor (deneme ${attempt + 1}/${maxRetries})...`);
+                    console.log(`[${providerLabel}] geçici hata (${status || '?'}, model: ${model}), ${waitMs}ms bekleyip tekrar deneniyor (deneme ${attempt + 1}/${maxRetries})...`);
                     await new Promise(r => setTimeout(r, waitMs));
                     continue;
                 }
 
                 // Kalıcı, tekrar denenemez bir hata — bu modelden vazgeç, sıradaki
                 // modele geç (belki de sorun sadece bu modele özgüdür).
-                console.warn(`⚠ Model "${model}" için kalıcı hata, sıradaki modele geçiliyor: ${message}`);
+                console.warn(`⚠ [${providerLabel}] Model "${model}" için kalıcı hata, sıradaki modele geçiliyor: ${message}`);
                 break;
             }
         }
     }
-    throw lastError;
+    throw lastError || new Error(`${providerLabel}: hiçbir model denenemedi.`);
+}
+
+async function callAI(prompt, maxRetries = 4) {
+    const hasGemini = !!process.env.GEMINI_API_KEY;
+    const hasGroq = !!process.env.GROQ_API_KEY;
+
+    if (!hasGemini && !hasGroq) {
+        throw new Error('Ne GEMINI_API_KEY ne de GROQ_API_KEY tanımlı. Railway → Variables kısmında en az birini ekleyip yeniden deploy et.');
+    }
+
+    if (hasGemini) {
+        try {
+            return await runWithFallback('Gemini', GEMINI_MODEL_CANDIDATES, (model) => callGeminiRaw(model, prompt), maxRetries);
+        } catch (geminiError) {
+            console.warn(`⚠ Gemini (birincil sağlayıcı) tüm modellerde başarısız oldu: ${geminiError?.message || geminiError}`);
+            if (!hasGroq) throw geminiError;
+            console.warn('→ Groq (yedek sağlayıcı) deneniyor...');
+        }
+    }
+
+    return await runWithFallback('Groq', GROQ_MODEL_CANDIDATES, (model) => callGroqRaw(model, prompt), maxRetries);
 }
 
 async function pickTheme() {
