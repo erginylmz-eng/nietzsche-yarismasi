@@ -52,8 +52,14 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL_CANDIDATES = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
 const THEMES = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
-const ROUND_DURATION_MS = 30 * 60 * 1000;
+const ROUND_DURATION_MS = 15 * 60 * 1000;
 const ADMIN_EMAIL = 'erginylmz@gmail.com';
+
+// Bir katılımcının "online" (çevrimiçi) sayılması için son "hâlâ buradayım"
+// sinyalinden (heartbeat) bu kadar milisaniye içinde olması gerekir. Bu değer
+// index.html'deki ONLINE_THRESHOLD_MS ile AYNI olmalı — biri diğerinden bağımsız
+// tutulur, birini değiştirirsen diğerini de güncellemen gerekir.
+const ONLINE_THRESHOLD_MS = 40000;
 
 // Ücretsiz katmanın dakikalık/günlük istek sınırına takılırsak ya da Groq'un
 // sunucuları geçici olarak aşırı yüklüyse kısa bekleyip tekrar dene. Bir model
@@ -425,12 +431,31 @@ app.post('/api/evaluate-round', async (req, res) => {
             const participantsSnap = await tx.get(db.collection('participants').where('status', '==', 'connected'));
             const responsesSnap = await tx.get(db.collection('responses').where('case_number', '==', caseNumber));
 
-            // Admin bir katılımcı değildir; sayıma dahil edilmez.
-            const totalParticipants = participantsSnap.docs.filter(d => d.data().email !== ADMIN_EMAIL).length;
-            const submittedCount = responsesSnap.size;
+            // Admin bir katılımcı değildir; sayıma dahil edilmez. Ayrıca sadece
+            // ŞU AN çevrimiçi olan (son 40 saniye içinde heartbeat göndermiş)
+            // katılımcılar "cevap vermesi beklenenler" sayılır — turun ortasında
+            // sessizce ayrılan biri artık bekleme listesinde tutulmaz.
+            const now = Date.now();
+            const isOnline = (data) => {
+                if (!data || !data.lastSeenAt || typeof data.lastSeenAt.toMillis !== 'function') return false;
+                return (now - data.lastSeenAt.toMillis()) < ONLINE_THRESHOLD_MS;
+            };
+            const onlineParticipantIds = participantsSnap.docs
+                .filter(d => d.data().email !== ADMIN_EMAIL && isOnline(d.data()))
+                .map(d => d.id);
+
+            const respondedIds = new Set(responsesSnap.docs.map(d => d.data().participant_id));
+
+            const totalParticipants = onlineParticipantIds.length;
+            const submittedCount = onlineParticipantIds.filter(id => respondedIds.has(id)).length;
             const timeUp = (Date.now() - session.startTime) >= session.duration;
 
-            if (submittedCount < totalParticipants && !timeUp) {
+            // totalParticipants > 0 koruması: o an kimse çevrimiçi değilse (ör. herkesin
+            // bağlantısı geçici olarak koptuysa) "0/0 tamamlandı" diye yanlışlıkla
+            // turu bitirmeyelim — süre dolana kadar beklemeye devam edilir.
+            const allOnlineHaveAnswered = totalParticipants > 0 && submittedCount >= totalParticipants;
+
+            if (!allOnlineHaveAnswered && !timeUp) {
                 return { proceed: false, reason: 'waiting', submittedCount, totalParticipants };
             }
 
