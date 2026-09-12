@@ -774,7 +774,7 @@
                 <h3>Yarışma Kontrolü</h3>
                 <p style="margin-bottom: 10px; color: #666; font-size: 13px;">
                     Butona bastığın anda vaka yapay zeka tarafından anında üretilir — sen dahil, önceden kimse görmez.
-                    Vaka herkese (senin ekranına da) aynı anda görünür ve 30 dakikalık süre başlar.
+                    Vaka herkese (senin ekranına da) aynı anda görünür ve 15 dakikalık süre başlar.
                 </p>
                 <button id="startButton" onclick="startCompetitionWithAI()" style="width: auto; padding: 15px 50px; font-size: 16px;" disabled>
                     Yapay Zekadan Yeni Vaka İste ve Yarışmayı Başlat
@@ -885,7 +885,7 @@
             </div>
 
             <div id="competitionArea" style="display: none;">
-                <div class="timer" id="timer">30:00</div>
+                <div class="timer" id="timer">15:00</div>
                 <p class="round-status" id="roundStatusText"></p>
 
                 <div class="case-container">
@@ -1799,10 +1799,14 @@
             activeListeners[listenerKey] = db.collection('responses')
                 .where('case_number', '==', caseNumber)
                 .onSnapshot(snapshot => {
-                    const submitted = snapshot.size;
+                    const respondedIds = new Set(snapshot.docs.map(d => d.data().participant_id));
                     db.collection('participants').where('status', '==', 'connected').get().then(pSnap => {
-                        // Admin bir katılımcı değildir; sayıma dahil edilmez.
-                        const total = pSnap.docs.filter(d => d.data().email !== ADMIN_EMAIL).length;
+                        // Admin bir katılımcı değildir; sayıma dahil edilmez. Sadece
+                        // ŞU AN çevrimiçi olanlar "beklenen" sayılır — backend'deki
+                        // /api/evaluate-round mantığıyla aynı (bkz. isParticipantOnline).
+                        const onlineDocs = pSnap.docs.filter(d => d.data().email !== ADMIN_EMAIL && isParticipantOnline(d.data()));
+                        const total = onlineDocs.length;
+                        const submitted = onlineDocs.filter(d => respondedIds.has(d.id)).length;
                         const el = document.getElementById('waitingCount');
                         if (el) el.textContent = `${submitted} / ${total} katılımcı cevap verdi`;
                     });
