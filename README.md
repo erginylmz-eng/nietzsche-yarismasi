@@ -43,6 +43,7 @@ Friedrich Nietzsche'nin perspektifinden kurumsal vakaları analiz etmek için ta
 - Node.js 18+
 - Firebase projesi (Firestore + Google Authentication açık)
 - Groq API key (ücretsiz, kredi kartı istemez) — https://console.groq.com/keys
+- Groq API key (ücretsiz, kredi kartı istemez, yedek sağlayıcı) — https://console.groq.com/keys
 - Railway hesabı (deployment için)
 
 ### 2. Firebase Setup
@@ -67,7 +68,9 @@ FIREBASE_CLIENT_EMAIL=firebase-adminsdk-...@nietzsche-yarismasi.iam.gserviceacco
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 ```
 
-`GROQ_API_KEY` için https://console.groq.com/keys adresinden e-posta ya da Google hesabınla saniyeler içinde ücretsiz bir key alabilirsin — ödeme yöntemi/kredi kartı HİÇ istemez, bu yüzden Google Gemini'de yaşanan "aylık harcama tavanı" riski burada söz konusu değildir.
+`GROQ_API_KEY` için https://console.groq.com/keys adresinden e-posta ya da Google hesabınla saniyeler içinde ücretsiz bir key alabilirsin — ödeme yöntemi/kredi kartı HİÇ istemez, bu yüzden bir "bakiye/harcama tavanı" riski hiç söz konusu değildir.
+
+**Güvenlik:** Bu anahtar SADECE Railway → Variables kısmına eklenir — koda, sohbete, ekran görüntüsüne veya herhangi bir dosyaya asla yapıştırılmaz. Anahtar sızarsa Groq onu otomatik olarak iptal edebilir (bkz. Sorun Giderme).
 
 `FIREBASE_PRIVATE_KEY` değerini service account JSON dosyasındaki `private_key` alanından **tırnaklarıyla birlikte** kopyala (içindeki `\n` karakterleri olduğu gibi kalsın).
 
@@ -146,9 +149,9 @@ Sayfanın en altındaki siyah/yeşil **Sistem Günlüğü** kutusu her ekranda (
 - Railway'deki **Deploy Logs**'a bak — backend konsola hatayı yazar
 - Ücretsiz katmanın dakikalık/günlük istek sınırına takılırsa sistem otomatik tekrar dener, gerekirse yedek bir modele geçer; sürekli tekrarlıyorsa birkaç dakika bekleyip tekrar dene
 - Her katılımcı için artık iki yapay zeka çağrısı yapılıyor (puanlama + gelişim makalesi), buna ek olarak vaka başına bir kez örnek en iyi cevap için bir çağrı daha yapılıyor; bu yüzden değerlendirme aşaması katılımcı sayısı arttıkça biraz daha uzun sürebilir — bu normaldir, admin panelinde "🤖 yapay zeka değerlendiriyor" durumunda bekle
-- **Model otomatik geçişi:** Sağlayıcılar zaman zaman bir modeli emekliye ayırabiliyor ya da günlük ücretsiz kullanım hakkı beklenenden düşük çıkabiliyor. Bunun için sistem tek bir model adına bağımlı değil; `backend/api.js` içindeki `MODEL_CANDIDATES` listesinde sırayla denenecek modeller tutulur (şu an: önce `openai/gpt-oss-120b`, o çalışmazsa `llama-3.3-70b-versatile`, o da çalışmazsa `llama-3.1-8b-instant`). Bir model "bulunamadı" hatası ya da **günlük** kota hatası verirse sistem otomatik olarak listedeki bir sonraki modele geçer — elle müdahaleye gerek kalmaz
+- **Model otomatik geçişi:** Groq zaman zaman bir modeli emekliye ayırabiliyor ya da günlük ücretsiz kullanım hakkı beklenenden düşük çıkabiliyor. Bunun için sistem tek bir model adına bağımlı değil; `backend/api.js` içindeki `MODEL_CANDIDATES` listesinde sırayla denenecek modeller tutulur (şu an: önce `openai/gpt-oss-120b`, o çalışmazsa `llama-3.3-70b-versatile`, o da çalışmazsa `llama-3.1-8b-instant`). Bir model "bulunamadı" hatası ya da **günlük** kota hatası verirse sistem otomatik olarak listedeki bir sonraki modele geçer — elle müdahaleye gerek kalmaz
 - **"rate_limit_exceeded" hatası (günlük limit):** O an denenen modelin ücretsiz katmanda bir günde izin verdiği toplam istek sayısı dolmuş demektir. Sistem bu durumda zaten otomatik olarak bir sonraki modele geçmeyi dener (yukarıya bak); TÜM modellerin günlük kotası aynı anda dolarsa ertesi gün kotalar sıfırlanınca sorun kendiliğinden düzelir
-- **Neden Groq (ve neden Google Gemini değil):** Bu proje başlangıçta Google Gemini API kullanıyordu, ancak art arda iki ücretsiz-katman sorunuyla karşılaşıldı: önce bir modelin günlük istek hakkının beklenenden çok düşük çıkması, sonra da Google hesabına bir ödeme yöntemi bağlı olduğu için devreye giren "aylık harcama tavanı" hatası (bkz. https://ai.google.dev/gemini-api/docs/billing#project-spend-caps). Groq'a geçildi çünkü Groq, ödeme yöntemi/kredi kartı **hiç** istemeden ücretsiz bir API anahtarı veriyor — bu yüzden bu proje için "harcama tavanı" riski tamamen ortadan kalkıyor
+- **Neden Groq:** Bu proje sırasıyla Google Gemini, Claude (Anthropic) ve OpenAI ile de denendi, ama hepsinde ya ücretsiz-katman sorunları (Gemini'de günlük istek hakkının düşük çıkması ve "aylık harcama tavanı" hatası) ya da ücretli kullanım gerekliliği (Claude, OpenAI — ikisinin de ücretsiz katmanı yok) söz konusuydu. Groq'ta bunların hiçbiri yok: ödeme yöntemi/kredi kartı **hiç** istemeden ücretsiz bir API anahtarı veriyor — bu yüzden bu proje için tek sağlayıcı olarak Groq'ta karar kılındı
 
 ### Vaka görünmüyor / yarışma başlamıyor
 - Admin panelindeki Sistem Günlüğü'nde "Vaka başlatma hatası" var mı bak
