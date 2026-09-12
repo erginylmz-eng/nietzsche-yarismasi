@@ -28,38 +28,26 @@ admin.initializeApp({
 const db = admin.firestore();
 const FieldValue = admin.firestore.FieldValue;
 
-// ==================== YAPAY ZEKA (CLAUDE birincil — ücretli, GROQ yedek — ücretsiz) ====================
-// Claude (Anthropic) birincil sağlayıcı: anahtar https://console.anthropic.com/settings/keys
-// adresinden alınır (Messages API, REST — Node'un yerleşik fetch'i ile çağrılır,
-// ek paket gerekmez). ÖNEMLİ: Groq/Gemini'nin aksine Claude API ücretsiz bir
-// katman SUNMAZ — kullanım kadar ödemeli, hesaba bir kredi kartı/fatura yöntemi
-// bağlı olması gerekir. Bakiye biterse ya da bir ödeme sorunu çıkarsa (örn.
-// kart süresi dolmuşsa) istekler başarısız olmaya başlar; bu durumda sistem
-// otomatik olarak Groq'un ücretsiz katmanına düşer, böylece platform tamamen
-// durmaz (anahtar https://console.groq.com/keys adresinden alınır, API
-// OpenAI'nin sohbet tamamlama formatıyla uyumludur).
-// Her iki anahtar da SADECE Railway → Variables kısmına eklenir; koda veya
-// herhangi bir dosyaya asla yazılmaz.
-if (!process.env.ANTHROPIC_API_KEY) {
-    console.warn('⚠ ANTHROPIC_API_KEY tanımlı değil — sistem doğrudan Groq yedeğine düşecek (varsa).');
-}
+// ==================== YAPAY ZEKA (GROQ — ÜCRETSİZ KATMAN) ====================
+// Groq tek sağlayıcı: ödeme yöntemi/kredi kartı hiç istemeden (sadece e-posta
+// ya da Google hesabıyla) API anahtarı veriyor, bu yüzden bir "harcama tavanı"
+// ya da bakiye riski hiç yok — anahtar https://console.groq.com/keys
+// adresinden alınır. API, OpenAI'nin sohbet tamamlama (chat completions)
+// formatıyla uyumludur, bu yüzden ek bir paket kurmadan Node'un yerleşik
+// fetch'i ile çağrılır. Anahtar SADECE Railway → Variables kısmına eklenir;
+// koda veya herhangi bir dosyaya asla yazılmaz.
 if (!process.env.GROQ_API_KEY) {
-    console.warn('⚠ GROQ_API_KEY tanımlı değil — Claude tamamen başarısız olursa (bakiye/kota/kesinti) yedek sağlayıcı olmayacak.');
+    console.error('✗ UYARI: GROQ_API_KEY ortam değişkeni tanımlı değil! Railway → Variables kısmını kontrol et.');
 }
 
-const ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages';
-const ANTHROPIC_API_VERSION = '2023-06-01';
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// Claude tarafı (birincil sağlayıcı): claude-sonnet-5 birincil model (hız/zeka
-// dengesi iyi, değerlendirme ve makale üretimi için yeterince güçlü);
-// kullanılamazsa daha hızlı/ucuz claude-haiku-4-5'e düşülür.
-const ANTHROPIC_MODEL_CANDIDATES = ['claude-sonnet-5', 'claude-haiku-4-5-20251001'];
-
-// Groq tarafı (yedek sağlayıcı): gpt-oss-120b birincil model (güçlü muhakeme,
-// ücretsiz katmanda günde 1000 istek); ilk ikisi kullanılamazsa
-// llama-3.1-8b-instant'a düşülür (günde 14.400 istek hakkı olan yedek).
-const GROQ_MODEL_CANDIDATES = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+// Groq zaman zaman bir modeli emekliye ayırabiliyor ya da bir modelin günlük
+// isteği dolabiliyor; aynı dayanıklılık için birden fazla model sırayla denenir.
+// gpt-oss-120b birincil model (güçlü muhakeme, ücretsiz katmanda günde 1000
+// istek); ilk ikisi kullanılamazsa llama-3.1-8b-instant'a düşülür (günde 14.400
+// istek hakkı olan, daha küçük ama en bol kotalı yedek).
+const MODEL_CANDIDATES = ['openai/gpt-oss-120b', 'llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
 
 const THEMES = ['Adalet', 'Eşitlik', 'Özgürlük', 'Ahlak/Etik'];
 const ROUND_DURATION_MS = 15 * 60 * 1000;
@@ -71,138 +59,81 @@ const ADMIN_EMAIL = 'erginylmz@gmail.com';
 // tutulur, birini değiştirirsen diğerini de güncellemen gerekir.
 const ONLINE_THRESHOLD_MS = 40000;
 
-async function callClaudeRaw(model, prompt) {
-    const res = await fetch(ANTHROPIC_API_URL, {
-        method: 'POST',
-        headers: {
-            'x-api-key': process.env.ANTHROPIC_API_KEY,
-            'anthropic-version': ANTHROPIC_API_VERSION,
-            'content-type': 'application/json'
-        },
-        body: JSON.stringify({
-            model,
-            max_tokens: 2048,
-            temperature: 0.9,
-            messages: [{ role: 'user', content: prompt }]
-        })
-    });
-
-    if (!res.ok) {
-        const errBody = await res.text();
-        const error = new Error(errBody || `Claude isteği başarısız (HTTP ${res.status})`);
-        error.status = res.status;
-        throw error;
+// Ücretsiz katmanın dakikalık/günlük istek sınırına takılırsak ya da Groq'un
+// sunucuları geçici olarak aşırı yüklüyse kısa bekleyip tekrar dene. Bir model
+// kaldırılmışsa ("not found") ya da o modelin GÜNLÜK kotası tükenmişse, aynı
+// modeli tekrar denemek yerine listedeki bir sonraki modele geçilir.
+async function callAI(prompt, maxRetries = 4) {
+    if (!process.env.GROQ_API_KEY) {
+        throw new Error('GROQ_API_KEY tanımlı değil. Railway → Variables kısmında bu değişkeni ekleyip yeniden deploy et.');
     }
 
-    const data = await res.json();
-    const text = data?.content?.[0]?.text;
-    if (typeof text !== 'string' || !text.trim()) {
-        throw new Error(`Claude boş yanıt döndürdü${data?.stop_reason ? ` (stop_reason: ${data.stop_reason})` : ''}.`);
-    }
-    return text;
-}
-
-async function callGroqRaw(model, prompt) {
-    const res = await fetch(GROQ_API_URL, {
-        method: 'POST',
-        headers: {
-            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            model,
-            messages: [{ role: 'user', content: prompt }],
-            temperature: 0.9
-        })
-    });
-
-    if (!res.ok) {
-        const errBody = await res.text();
-        const error = new Error(errBody || `Groq isteği başarısız (HTTP ${res.status})`);
-        error.status = res.status;
-        throw error;
-    }
-
-    const data = await res.json();
-    const text = data?.choices?.[0]?.message?.content;
-    if (typeof text !== 'string' || !text.trim()) {
-        throw new Error('Groq boş yanıt döndürdü.');
-    }
-    return text;
-}
-
-// Dakikalık/günlük istek sınırına takılırsak ya da sağlayıcının sunucuları
-// geçici olarak aşırı yüklüyse kısa bekleyip tekrar dene. Bir model
-// kaldırılmışsa ("not found"), o modelin GÜNLÜK/aylık kotası tükenmişse, bir
-// harcama tavanına takılmışsa YA DA hesabın bakiyesi/kredisi yetersizse, aynı
-// modeli tekrar denemek yerine listedeki bir sonraki modele geçilir. Hem
-// Claude hem Groq için ortak kullanılan tek bir yeniden-deneme/yedeğe-geçiş
-// mantığı.
-async function runWithFallback(providerLabel, candidates, rawCaller, maxRetries) {
     let lastError;
-    for (const model of candidates) {
+    for (const model of MODEL_CANDIDATES) {
         for (let attempt = 0; attempt < maxRetries; attempt++) {
             try {
-                return await rawCaller(model);
+                const res = await fetch(GROQ_API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        model,
+                        messages: [{ role: 'user', content: prompt }],
+                        temperature: 0.9
+                    })
+                });
+
+                if (!res.ok) {
+                    const errBody = await res.text();
+                    const error = new Error(errBody || `Groq isteği başarısız (HTTP ${res.status})`);
+                    error.status = res.status;
+                    throw error;
+                }
+
+                const data = await res.json();
+                const text = data?.choices?.[0]?.message?.content;
+                if (typeof text !== 'string' || !text.trim()) {
+                    throw new Error('Groq boş yanıt döndürdü.');
+                }
+                return text;
             } catch (error) {
                 lastError = error;
                 const status = error?.status;
                 const message = error?.message || '';
 
-                const isModelGone = status === 404 || /model_not_found|does not exist|not found for API/i.test(message);
-                const isQuotaGone =
-                    (/rate_limit_exceeded/i.test(message) && /per day/i.test(message)) ||
-                    (/RESOURCE_EXHAUSTED/i.test(message) && /quota/i.test(message)) ||
-                    /spending cap/i.test(message) ||
-                    /credit balance is too low|insufficient_quota|billing/i.test(message);
-
-                if (isModelGone || isQuotaGone) {
-                    console.warn(`⚠ [${providerLabel}] Model "${model}" kullanılamıyor (${isModelGone ? 'bulunamadı/kaldırılmış' : 'kota/bakiye/harcama sınırı doldu'}), sıradaki modele geçiliyor...`);
+                // Model kaldırılmış/yeniden adlandırılmış, ya da bu modelin günlük
+                // (dakikalık değil) kotası tükenmiş — bu modeli tekrar denemenin
+                // anlamı yok, listedeki bir sonraki modele geç.
+                const isModelGone = status === 404 || /model_not_found|does not exist/i.test(message);
+                const isDailyQuotaGone = /rate_limit_exceeded/i.test(message) && /per day/i.test(message);
+                if (isModelGone || isDailyQuotaGone) {
+                    console.warn(`⚠ Model "${model}" kullanılamıyor (${isModelGone ? 'bulunamadı/kaldırılmış' : 'günlük kota doldu'}), sıradaki modele geçiliyor...`);
                     break;
                 }
 
                 const isRetryable =
-                    status === 429 || status === 503 || status === 529 ||
+                    status === 429 || status === 503 ||
                     /rate.?limit/i.test(message) ||
                     /UNAVAILABLE|overloaded|high demand|internal error|try again later/i.test(message);
 
                 if (isRetryable && attempt < maxRetries - 1) {
                     // Kademeli bekleme: 3sn, 6sn, 12sn (üst sınır 12sn)
                     const waitMs = Math.min(3000 * Math.pow(2, attempt), 12000);
-                    console.log(`[${providerLabel}] geçici hata (${status || '?'}, model: ${model}), ${waitMs}ms bekleyip tekrar deneniyor (deneme ${attempt + 1}/${maxRetries})...`);
+                    console.log(`Groq geçici hata (${status || '?'}, model: ${model}), ${waitMs}ms bekleyip tekrar deneniyor (deneme ${attempt + 1}/${maxRetries})...`);
                     await new Promise(r => setTimeout(r, waitMs));
                     continue;
                 }
 
                 // Kalıcı, tekrar denenemez bir hata — bu modelden vazgeç, sıradaki
                 // modele geç (belki de sorun sadece bu modele özgüdür).
-                console.warn(`⚠ [${providerLabel}] Model "${model}" için kalıcı hata, sıradaki modele geçiliyor: ${message}`);
+                console.warn(`⚠ Model "${model}" için kalıcı hata, sıradaki modele geçiliyor: ${message}`);
                 break;
             }
         }
     }
-    throw lastError || new Error(`${providerLabel}: hiçbir model denenemedi.`);
-}
-
-async function callAI(prompt, maxRetries = 4) {
-    const hasClaude = !!process.env.ANTHROPIC_API_KEY;
-    const hasGroq = !!process.env.GROQ_API_KEY;
-
-    if (!hasClaude && !hasGroq) {
-        throw new Error('Ne ANTHROPIC_API_KEY ne de GROQ_API_KEY tanımlı. Railway → Variables kısmında en az birini ekleyip yeniden deploy et.');
-    }
-
-    if (hasClaude) {
-        try {
-            return await runWithFallback('Claude', ANTHROPIC_MODEL_CANDIDATES, (model) => callClaudeRaw(model, prompt), maxRetries);
-        } catch (claudeError) {
-            console.warn(`⚠ Claude (birincil sağlayıcı) tüm modellerde başarısız oldu: ${claudeError?.message || claudeError}`);
-            if (!hasGroq) throw claudeError;
-            console.warn('→ Groq (yedek sağlayıcı) deneniyor...');
-        }
-    }
-
-    return await runWithFallback('Groq', GROQ_MODEL_CANDIDATES, (model) => callGroqRaw(model, prompt), maxRetries);
+    throw lastError;
 }
 
 async function pickTheme() {
